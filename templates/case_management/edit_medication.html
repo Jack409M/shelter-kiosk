@@ -14,17 +14,17 @@
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a
           class="btn"
-          href="{{ url_for('case_management.medications', resident_id=resident['id']) }}"
+          href="{{ back_url }}"
           style="border-radius:14px; padding:11px 16px;"
         >
           Back to Medications
         </a>
         <a
           class="btn"
-          href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+          href="{{ done_url }}"
           style="border-radius:14px; padding:11px 16px;"
         >
-          Back to Case Management
+          Done with Medications
         </a>
       </div>
     </div>
@@ -40,6 +40,8 @@
 
     <form method="post" action="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=medication['id']) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="return_to" value="{{ return_to }}">
+      <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
       <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px;">
         <div>
@@ -140,7 +142,7 @@
         <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Changes</button>
         <a
           class="btn"
-          href="{{ url_for('case_management.medications', resident_id=resident['id']) }}"
+          href="{{ back_url }}"
           style="border-radius:14px; padding:11px 16px;"
         >
           Cancel
