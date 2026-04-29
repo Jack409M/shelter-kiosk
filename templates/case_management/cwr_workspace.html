@@ -1,42 +1,208 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css', v='20260428_cwr_modules2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_cwr_modules2') }}">
 {% endblock %}
 
 {% block content %}
 {% set resident_id = resident["id"] %}
+{% set shelter = resident["shelter"] %}
 {% set active_panel = request.args.get("active_panel", "") %}
+{% set starts_in_meeting = active_panel != "" %}
+{% set rs = recovery_snapshot or {} %}
+{% set rs_level = rs.get("program_level") %}
+{% set rs_step = rs.get("step_current") %}
+{% set rs_sponsor = rs.get("sponsor_name") %}
+{% set rs_employer = rs.get("employer_name") %}
+{% set rs_income = rs.get("monthly_income") %}
+{% set rs_medications = rs.get("medications", []) %}
+{% set workspace_header = workspace_header if workspace_header is defined else {} %}
+{% set meeting_defaults = meeting_defaults if meeting_defaults is defined else {} %}
+{% set header_days_sober = workspace_header.get("days_sober") %}
+{% set header_open_needs_count = workspace_header.get("open_needs_count", 0) %}
+{% set header_program_status = workspace_header.get("program_status") %}
+{% set today_value = meeting_defaults.meeting_date if meeting_defaults.meeting_date else '' %}
+
+{% macro question(panel, text, value) %}
+  <a href="#" class="cwr-question{% if active_panel == panel %} is-active{% endif %}" data-panel="{{ panel }}">
+    <span>{{ text }}</span><strong>{{ value }}</strong>
+  </a>
+{% endmacro %}
+
+{% macro note_hidden(summary, panel) %}
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="redirect_to" value="cwr">
+  <input type="hidden" name="active_panel" value="{{ panel }}">
+  <input type="hidden" name="meeting_date" value="{{ today_value }}">
+  <input type="hidden" name="notes" value="{{ summary }}">
+  <input type="hidden" name="progress_notes" value="">
+  <input type="hidden" name="setbacks_or_incidents" value="">
+  <input type="hidden" name="action_items" value="">
+  <input type="hidden" name="overall_summary" value="{{ summary }}">
+  <input type="hidden" name="updated_grit" value="">
+  <input type="hidden" name="parenting_class_completed" value="">
+  <input type="hidden" name="warrants_or_fines_paid" value="">
+  <input type="hidden" name="ready_for_next_level" value="">
+  <input type="hidden" name="recommended_next_level" value="">
+  <input type="hidden" name="blocker_reason" value="">
+  <input type="hidden" name="override_or_exception" value="">
+  <input type="hidden" name="staff_review_note" value="">
+{% endmacro %}
+
+{% macro module_panel(title, description, url, button_text) %}
+  <div class="cwr-panel-heading">
+    <h3>{{ title }}</h3>
+    <p>{{ description }}</p>
+  </div>
+  <div class="cwr-empty" style="text-align:left;">
+    This opens the existing workspace module so validation, history, edit flow, and database writes stay in the original source of truth.
+  </div>
+  <a class="cwr-save-link" href="{{ url }}">{{ button_text }}</a>
+{% endmacro %}
+
+{% macro panel(panel_id) %}
+  class="cwr-panel{% if active_panel == panel_id %} is-open{% endif %}" id="cwr-panel-{{ panel_id }}" {% if active_panel != panel_id %}hidden{% endif %}
+{% endmacro %}
 
 <div class="cmx-page cwr-page">
   <div class="cmx-shell">
+    {% include "case_management/partials/resident_case/_workspace_header.html" %}
 
     <div class="cwr-control-row">
+      <div>
+        <div class="cwr-preview-label">Preview Workspace</div>
+        <div class="cwr-preview-subtitle">Case Manager Workspace Renovation</div>
+      </div>
+      <div class="cwr-mode-toggle" aria-label="Workspace mode">
+        <button type="button" class="cwr-mode-btn{% if not starts_in_meeting %} is-active{% endif %}" data-mode="review">Review</button>
+        <button type="button" class="cwr-mode-btn{% if starts_in_meeting %} is-active{% endif %}" data-mode="meeting">Meeting</button>
+        <button type="button" class="cwr-mode-btn" data-mode="budget">Budget Meeting</button>
+      </div>
       <a class="cwr-back-link" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Back to Original Workspace</a>
     </div>
 
-    <section>
-
-      <!-- MODULE LINKS LOCKED TO CWR -->
-
-      <a href="{{ url_for('case_management.ua_log', resident_id=resident_id, return_to='cwr', active_panel='ua') }}">UA</a>
-
-      <a href="{{ url_for('case_management.medications', resident_id=resident_id, return_to='cwr', active_panel='medications') }}">Medications</a>
-
-      <a href="{{ url_for('case_management.family_intake', resident_id=resident_id, return_to='cwr', active_panel='family') }}">Family</a>
-
-      <a href="{{ url_for('case_management.income_support', resident_id=resident_id, return_to='cwr', active_panel='income') }}">Income</a>
-
-      <a href="{{ url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='recovery') }}">Recovery</a>
-
-      <a href="{{ url_for('case_management.budget_sessions', resident_id=resident_id, return_to='cwr', active_panel='budget') }}">Budget</a>
-
-      <a href="{{ url_for('writeups.resident_writeups', resident_id=resident_id, return_to='cwr', active_panel='writeups') }}">Write Ups</a>
-
+    <section id="cwr-review" class="cwr-mode{% if not starts_in_meeting %} is-active{% endif %}">
+      <div class="cwr-review-grid">
+        <div class="cwr-card"><div class="cwr-card-label">Program Status</div><div class="cwr-card-value">{{ header_program_status or '—' }}</div><div class="cwr-card-sub">Level {{ rs_level or '—' }} · Step {{ rs_step if rs_step is not none and rs_step != '' else '—' }}</div></div>
+        <div class="cwr-card"><div class="cwr-card-label">Resident Stability</div><div class="cwr-card-value">{{ header_days_sober if header_days_sober is not none else '—' }}</div><div class="cwr-card-sub">Days sober</div></div>
+        <div class="cwr-card"><div class="cwr-card-label">Open Needs</div><div class="cwr-card-value">{{ header_open_needs_count }}</div><div class="cwr-card-sub">Needs requiring follow up</div></div>
+      </div>
     </section>
 
+    <section id="cwr-meeting" class="cwr-mode{% if starts_in_meeting %} is-active{% endif %}">
+      <div class="cwr-workspace-intro"><h2>Meeting</h2><p>Record meeting notes here. Use existing modules for specialized workflows.</p></div>
+      <div class="cwr-meeting-body">
+        <form class="cwr-note-form" method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="redirect_to" value="cwr">
+          <input type="hidden" name="active_panel" value="{{ active_panel }}">
+          <input type="hidden" name="updated_grit" value="">
+          <input type="hidden" name="parenting_class_completed" value="">
+          <input type="hidden" name="warrants_or_fines_paid" value="">
+          <input type="hidden" name="ready_for_next_level" value="">
+          <input type="hidden" name="recommended_next_level" value="">
+          <input type="hidden" name="blocker_reason" value="">
+          <input type="hidden" name="override_or_exception" value="">
+          <input type="hidden" name="staff_review_note" value="">
+          <div class="cwr-form-head">
+            <h3>Case Manager Notes</h3>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <a
+                class="cwr-save-link"
+                href="{{ url_for('case_management.notes_history', resident_id=resident_id, return_to='cwr', active_panel='notes') }}"
+              >
+                View All Notes
+              </a>
+              <button type="submit" class="cwr-save-btn">Save Meeting Note</button>
+            </div>
+          </div>
+          <div class="cwr-two-col compact"><label>Meeting Date<input type="date" name="meeting_date" value="{{ today_value }}" required></label><label>Location<input type="text" value="{{ shelter or 'Office' }}" readonly></label></div>
+          <div class="cwr-note-grid">
+            <label>Case Summary<textarea name="notes" rows="4" placeholder="Summarize the resident contact and key discussion from today">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea></label>
+            <label>Progress Since Last Meeting<textarea name="progress_notes" rows="4" placeholder="Record progress or follow through since the prior meeting">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea></label>
+            <label>Plan And Next Steps<textarea name="action_items" rows="4" placeholder="Record assignments, referrals, tasks, and next steps">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea></label>
+            <label>Meeting Overview<textarea name="overall_summary" rows="3" placeholder="Short meeting overview for quick reference">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea></label>
+            <label>Barriers And Concerns<textarea name="setbacks_or_incidents" rows="3" placeholder="Record barriers or concerns from today">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea></label>
+          </div>
+        </form>
+
+        <div class="cwr-question-layout">
+          <aside class="cwr-question-list" aria-label="Meeting questions">
+            {{ question('services', 'Do you need services today?', 'Meeting save') }}
+            {{ question('needs', 'Do we need to review any open needs?', header_open_needs_count ~ ' open') }}
+            {{ question('employment', 'Any change in employment?', rs_employer or 'Module') }}
+            {{ question('income', 'Any change in monthly net income?', '$%.2f'|format(rs_income) if rs_income is not none else 'Module') }}
+            {{ question('ua', 'Do we need to run a UA?', 'Module') }}
+            {{ question('medications', 'Any change in medications?', rs_medications|length ~ ' on file') }}
+            {{ question('family', 'Any changes in family?', 'Family intake') }}
+            {{ question('child-services', 'Services for children?', children|length ~ ' child records') }}
+            {{ question('step', 'Step level?', rs_step if rs_step is not none and rs_step != '' else 'Profile') }}
+            {{ question('sponsor', 'Sponsor?', rs_sponsor or 'Profile') }}
+            {{ question('writeups', 'Write ups?', 'Open module') }}
+            {{ question('sobriety', 'Any sobriety or treatment update?', header_days_sober if header_days_sober is not none else 'Profile') }}
+          </aside>
+        </div>
+
+        <div class="cwr-question-panels">
+          <div class="cwr-panel-placeholder{% if active_panel %} is-hidden{% endif %}" {% if active_panel %}hidden{% endif %}>Click a question on the left to open that section.</div>
+
+          <section {{ panel('services') }}>
+            <h3>Services Provided Today</h3>
+            <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+              {{ note_hidden('Services were provided today through CWR meeting mode.', 'services') }}
+              <div class="cwr-service-grid">
+                {% for service_name, unit_hint, note_hint in [("Counseling", "sessions", "Counseling notes"), ("Dental", "visits", "Dental notes"), ("Vision", "visits", "Vision notes"), ("Transportation", "rides", "Transportation notes"), ("Daycare", "days", "Daycare notes"), ("Legal Assistance", "visits", "Legal assistance notes"), ("Other", "units", "Other service notes")] %}
+                  <label class="cwr-service-row"><input type="checkbox" name="service_type" value="{{ service_name }}"><span>{{ service_name }}</span><input type="number" name="quantity_{{ service_name }}" min="0" placeholder="Qty"><input type="text" name="unit_{{ service_name }}" placeholder="{{ unit_hint }}"><input type="text" name="service_notes_{{ service_name }}" placeholder="{{ note_hint }}"></label>
+                {% endfor %}
+              </div>
+              <button class="cwr-save-btn" type="submit">Save Services With Meeting</button>
+            </form>
+          </section>
+
+          <section {{ panel('needs') }}>
+            <h3>Open Needs Worked On Today</h3>
+            <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+              {{ note_hidden('Open needs were reviewed today through CWR meeting mode.', 'needs') }}
+              {% if open_needs %}
+                {% for need in open_needs %}
+                  <div class="cwr-need-card"><strong>{{ need['need_label'] }}</strong><div class="cwr-two-col"><select name="need_status_{{ need['need_key'] }}"><option value="">Leave Open</option><option value="addressed">Addressed</option><option value="not_applicable">Not Applicable</option></select><input type="text" value="{{ need['source_value'] or '' }}" readonly></div><textarea name="need_note_{{ need['need_key'] }}" rows="2" placeholder="What happened today"></textarea></div>
+                {% endfor %}
+                <button class="cwr-save-btn" type="submit">Save Need Review With Meeting</button>
+              {% else %}
+                <div class="cwr-empty">No open needs are currently recorded.</div>
+              {% endif %}
+            </form>
+          </section>
+
+          <section {{ panel('employment') }}>{{ module_panel('Employment', 'Employment is managed by the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id, return_to='cwr', active_panel='employment'), 'Open Employment And Income') }}</section>
+          <section {{ panel('income') }}>{{ module_panel('Monthly Income', 'Monthly income is calculated through the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id, return_to='cwr', active_panel='income'), 'Open Employment And Income') }}</section>
+          <section {{ panel('ua') }}>{{ module_panel('UA', 'Use the UA module for add, history, and edit flow.', url_for('case_management.ua_log', resident_id=resident_id), 'Open UA Module') }}</section>
+          <section {{ panel('medications') }}>{{ module_panel('Medications', 'Use the medications module for the medication list, add, and edit flow.', url_for('case_management.medications', resident_id=resident_id), 'Open Medication Module') }}</section>
+          <section {{ panel('family') }}>{{ module_panel('Family Changes', 'Family changes are managed through the family intake module.', url_for('case_management.family_intake', resident_id=resident_id), 'Open Family Intake') }}</section>
+          <section {{ panel('child-services') }}>{% if children %}{{ module_panel('Child Services', 'Use the child services module for service history, add, edit, and delete flow.', url_for('case_management.child_services', child_id=children[0]['id']), 'Open Child Services') }}{% else %}{{ module_panel('Child Services', 'No active child records are on file. Add or update children through Family Intake.', url_for('case_management.family_intake', resident_id=resident_id), 'Open Family Intake') }}{% endif %}</section>
+          <section {{ panel('step') }}>{{ module_panel('Step Level', 'Step level is managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='step'), 'Open Recovery Profile') }}</section>
+          <section {{ panel('sponsor') }}>{{ module_panel('Sponsor', 'Sponsor information is managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='sponsor'), 'Open Recovery Profile') }}</section>
+          <section {{ panel('writeups') }}>{{ module_panel('Write Ups', 'Write ups are managed in the resident write up workspace.', url_for('writeups.resident_writeups', resident_id=resident_id), 'Open Write Ups') }}</section>
+          <section {{ panel('sobriety') }}>{{ module_panel('Sobriety Or Treatment', 'Sobriety and treatment fields are managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='sobriety'), 'Open Recovery Profile') }}</section>
+        </div>
+      </div>
+    </section>
+
+    <section id="cwr-budget" class="cwr-mode">
+      <div class="cwr-workspace-intro"><h2>Budget Meeting</h2><p>Use this mode for budget specific reviews.</p></div>
+      <div class="cwr-review-grid"><a class="cwr-card cwr-action" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}"><span class="cwr-card-label">Budget</span><span class="cwr-card-value">Open Budget</span><span class="cwr-card-sub">Review or create a budget session.</span></a><div class="cwr-card"><div class="cwr-card-label">Income</div><div class="cwr-card-value">{{ '$%.2f'|format(rs_income) if rs_income is not none else '—' }}</div><div class="cwr-card-sub">Current income snapshot.</div></div><div class="cwr-card"><div class="cwr-card-label">Employment</div><div class="cwr-card-value">{{ rs_employer or '—' }}</div><div class="cwr-card-sub">Current employer on file.</div></div></div>
+    </section>
   </div>
 </div>
 
+<script>
+  window.RESIDENT_CASE_RESIDENT_ID = "{{ resident_id }}";
+  window.RESIDENT_CASE_CHILD_SERVICE_BASE_ACTION = "{{ url_for('case_management.child_services', child_id=0) }}";
+  window.RESIDENT_CASE_NOTE_SAVED = {{ 'true' if request.args.get('case_note_saved') == '1' else 'false' }};
+  window.CWR_NOTE_EDIT_BY_DATE = {{ cwr_note_edit_by_date | tojson }};
+  window.CWR_NOTE_VALUES_BY_DATE = {{ cwr_note_values_by_date | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260428_cwr_modules2') }}"></script>
+<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260428_cwr_modules2') }}"></script>
 {% endblock %}
