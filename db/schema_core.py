@@ -172,15 +172,12 @@ def ensure_audit_log_table(kind: str) -> None:
 
 
 def ensure_columns_and_security_upgrades(kind: str) -> None:
-    """
-    Safe schema evolution for existing deployments.
-    """
-
     upgrades = (
         ("staff_users", "first_name TEXT"),
         ("staff_users", "last_name TEXT"),
         ("staff_users", "mobile_phone TEXT"),
         ("staff_users", "calendar_color TEXT"),
+        ("staff_users", "email TEXT"),
         ("security_settings", "sms_system_expires_at TEXT"),
         ("security_settings", "kiosk_intake_expires_at TEXT"),
         ("security_settings", "admin_login_only_expires_at TEXT"),
