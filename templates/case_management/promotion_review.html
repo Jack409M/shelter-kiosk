@@ -459,7 +459,7 @@
     {% endif %}
 
     <div class="cmx-workspace-nav cmx-card">
-      <a class="cmx-workspace-tab" href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}">Workspace</a>
+      <a class="cmx-workspace-tab" href="{{ url_for('case_management.cwr_workspace', resident_id=resident.id) }}">Workspace</a>
       <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">Level Evaluation</a>
       <a class="cmx-workspace-tab" href="{{ url_for('case_management.exit_followup', resident_id=resident.id) }}">Exit and Follow Up</a>
     </div>
