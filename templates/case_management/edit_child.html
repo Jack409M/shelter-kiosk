@@ -45,7 +45,7 @@
 
       <a
         class="btn"
-        href="{{ url_for('case_management.resident_case', resident_id=child['resident_id'] if child is mapping else child[1]) }}"
+        href="{{ back_url }}"
         style="border-radius:14px; padding:11px 16px;"
       >
         Back to Case Management
@@ -56,6 +56,8 @@
   <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
     <form method="post">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="return_to" value="{{ return_to }}">
+      <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
       <div>
         <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Child Name</strong></label>
@@ -139,7 +141,7 @@
         <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Changes</button>
         <a
           class="btn"
-          href="{{ url_for('case_management.resident_case', resident_id=child['resident_id'] if child is mapping else child[1]) }}"
+          href="{{ done_url }}"
           style="border-radius:14px; padding:11px 16px;"
         >
           Done
