@@ -86,6 +86,8 @@
         <div class="cwr-card"><div class="cwr-card-label">Program Status</div><div class="cwr-card-value">{{ header_program_status or '—' }}</div><div class="cwr-card-sub">Level {{ rs_level or '—' }} · Step {{ rs_step if rs_step is not none and rs_step != '' else '—' }}</div></div>
         <div class="cwr-card"><div class="cwr-card-label">Resident Stability</div><div class="cwr-card-value">{{ header_days_sober if header_days_sober is not none else '—' }}</div><div class="cwr-card-sub">Days sober</div></div>
         <div class="cwr-card"><div class="cwr-card-label">Open Needs</div><div class="cwr-card-value">{{ header_open_needs_count }}</div><div class="cwr-card-sub">Needs requiring follow up</div></div>
+        <a class="cwr-card cwr-action" href="{{ url_for('case_management.promotion_review', resident_id=resident_id) }}"><span class="cwr-card-label">Level Evaluation</span><span class="cwr-card-value">Open Review</span><span class="cwr-card-sub">Review promotion readiness and apply level changes.</span></a>
+        <a class="cwr-card cwr-action" href="{{ url_for('case_management.exit_followup', resident_id=resident_id) }}"><span class="cwr-card-label">Exit And Follow Up</span><span class="cwr-card-value">Open Exit</span><span class="cwr-card-sub">Complete exit workflow and follow up records.</span></a>
       </div>
     </section>
 
