@@ -250,7 +250,7 @@
     <div class="report-toolbar no-print">
       <div class="report-toolbar-left">Formal case summary print view</div>
       <div class="report-toolbar-actions">
-        <a class="report-btn" href="{{ url_for('case_management.resident_case', resident_id=report.resident.id) }}">Back to Resident</a>
+        <a class="report-btn" href="{{ url_for('case_management.cwr_workspace', resident_id=report.resident.id, active_panel='notes') }}">Back to Notes</a>
         <button type="button" class="report-btn report-btn-primary" onclick="window.print()">Print Report</button>
       </div>
     </div>
