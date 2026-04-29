@@ -94,6 +94,9 @@
 
 {% block content %}
 
+{% set return_to = request.args.get('return_to') or request.form.get('return_to') or request.args.get('redirect_to') or request.form.get('redirect_to') or '' %}
+{% set active_panel = request.args.get('active_panel') or request.form.get('active_panel') or 'notes' %}
+
 {% if resident is mapping %}
   {% set resident_id = resident["id"] %}
   {% set resident_name = (resident.get("first_name", "") ~ " " ~ resident.get("last_name", ""))|trim %}
@@ -155,6 +158,8 @@
 
     <form method="post" action="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="redirect_to" value="cwr">
+      <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
       <div class="cmx-grid cmx-grid-3">
         <div class="cmx-field">
@@ -327,7 +332,7 @@
 
       <div class="edit-note-actions">
         <button type="submit" class="cmx-btn">Save Changes</button>
-        <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
+        <a class="btn" href="{{ url_for('case_management.cwr_workspace', resident_id=resident_id, active_panel=active_panel) }}">Cancel</a>
       </div>
     </form>
   </div>
