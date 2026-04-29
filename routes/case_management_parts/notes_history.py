@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, session, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed, normalize_shelter_name
@@ -9,6 +9,9 @@ from routes.case_management_parts.resident_case_scope import (
     load_current_enrollment,
     load_resident_in_scope,
 )
+
+
+NOTES_ACTIVE_PANEL = "notes"
 
 
 def _require_case_manager_access():
@@ -20,6 +23,36 @@ def _require_case_manager_access():
 
 def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
+
+
+def _came_from_cwr() -> bool:
+    return (
+        request.args.get("return_to")
+        or request.form.get("return_to")
+        or ""
+    ).strip().lower() == "cwr"
+
+
+def _active_panel() -> str:
+    return (
+        request.args.get("active_panel")
+        or request.form.get("active_panel")
+        or NOTES_ACTIVE_PANEL
+    ).strip() or NOTES_ACTIVE_PANEL
+
+
+def _back_url(resident_id: int) -> str:
+    if _came_from_cwr():
+        return url_for(
+            "case_management.cwr_workspace",
+            resident_id=resident_id,
+            active_panel=_active_panel(),
+        )
+    return url_for("case_management.resident_case", resident_id=resident_id)
+
+
+def _back_redirect(resident_id: int):
+    return redirect(_back_url(resident_id))
 
 
 def notes_history_view(resident_id: int):
@@ -38,12 +71,12 @@ def notes_history_view(resident_id: int):
     enrollment = load_current_enrollment(resident_id, shelter)
     if not enrollment:
         flash("Resident does not have an active enrollment record yet.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _back_redirect(resident_id)
 
     enrollment_id = enrollment.get("id")
     if not isinstance(enrollment_id, int):
         flash("Active enrollment record is invalid.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _back_redirect(resident_id)
 
     notes, services = load_case_history(enrollment_id)
 
@@ -67,4 +100,7 @@ def notes_history_view(resident_id: int):
         enrollment_entry_date=enrollment.get("entry_date"),
         notes=notes,
         services=services,
+        return_to="cwr" if _came_from_cwr() else "",
+        active_panel=_active_panel(),
+        back_url=_back_url(resident_id),
     )
