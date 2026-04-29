@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Staff Email Management</h2>
+
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Username</th>
+    <th>Role</th>
+    <th>Email</th>
+    <th>Action</th>
+  </tr>
+
+  {% for user in users %}
+  <tr>
+    <td>{{ user.first_name }} {{ user.last_name }}</td>
+    <td>{{ user.username }}</td>
+    <td>{{ user.role }}</td>
+    <td>
+      {% if user.email %}
+        {{ user.email }}
+      {% else %}
+        <span style="color:red;">Missing</span>
+      {% endif %}
+    </td>
+    <td>
+      <form method="POST">
+        <input type="hidden" name="user_id" value="{{ user.id }}">
+        <input type="email" name="email" placeholder="Enter email" value="{{ user.email or '' }}">
+        <button type="submit">Save</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
