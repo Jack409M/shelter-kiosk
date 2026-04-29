@@ -259,6 +259,13 @@ def _send_webhook(alert: dict[str, Any]) -> bool:
 
 def _send_sms(alert: dict[str, Any]) -> bool:
     if not _env_truthy("ALERT_SMS_ENABLED"):
+        _log_delivery(
+            channel="sms",
+            status="error",
+            alert=alert,
+            message="Alert SMS delivery is disabled.",
+            metadata={"missing_or_false": "ALERT_SMS_ENABLED"},
+        )
         return False
 
     recipients = _split_recipients(_env("ALERT_SMS_RECIPIENTS"))
@@ -268,11 +275,12 @@ def _send_sms(alert: dict[str, Any]) -> bool:
             status="error",
             alert=alert,
             message="Alert SMS delivery is enabled but no recipients are configured.",
+            metadata={"missing": "ALERT_SMS_RECIPIENTS"},
         )
         return False
 
     try:
-        from core.sms_sender import send_sms
+        from core.sms_sender import send_sms, sms_delivery_ready
     except Exception as err:
         _log_delivery(
             channel="sms",
@@ -283,14 +291,36 @@ def _send_sms(alert: dict[str, Any]) -> bool:
         )
         return False
 
+    ready, reason = sms_delivery_ready()
+    if not ready:
+        _log_delivery(
+            channel="sms",
+            status="error",
+            alert=alert,
+            message="Alert SMS delivery is not ready.",
+            metadata={"reason": reason},
+        )
+        return False
+
     sent_count = 0
+    failed_count = 0
     sms_message = _safe_text(f"{_alert_subject(alert)}: {alert.get('message', '')}", 480)
 
     for recipient in recipients:
         try:
-            send_sms(recipient, sms_message, enforce_consent=False)
-            sent_count += 1
+            if send_sms(recipient, sms_message, enforce_consent=False):
+                sent_count += 1
+            else:
+                failed_count += 1
+                _log_delivery(
+                    channel="sms",
+                    status="error",
+                    alert=alert,
+                    message="System alert SMS delivery was skipped or failed for one recipient.",
+                    metadata={"recipient_suffix": recipient[-4:] if recipient else ""},
+                )
         except Exception as err:
+            failed_count += 1
             _log_delivery(
                 channel="sms",
                 status="error",
@@ -304,8 +334,8 @@ def _send_sms(alert: dict[str, Any]) -> bool:
             channel="sms",
             status="success",
             alert=alert,
-            message="System alert SMS delivery attempted.",
-            metadata={"recipient_count": sent_count},
+            message="System alert SMS delivered through Twilio.",
+            metadata={"sent_count": sent_count, "failed_count": failed_count},
         )
         return True
 
