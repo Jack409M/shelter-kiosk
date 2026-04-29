@@ -105,7 +105,18 @@
           <input type="hidden" name="blocker_reason" value="">
           <input type="hidden" name="override_or_exception" value="">
           <input type="hidden" name="staff_review_note" value="">
-          <div class="cwr-form-head"><h3>Case Manager Notes</h3><button type="submit" class="cwr-save-btn">Save Meeting Note</button></div>
+          <div class="cwr-form-head">
+            <h3>Case Manager Notes</h3>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <a
+                class="cwr-save-link"
+                href="{{ url_for('case_management.notes_history', resident_id=resident_id, return_to='cwr', active_panel='notes') }}"
+              >
+                View All Notes
+              </a>
+              <button type="submit" class="cwr-save-btn">Save Meeting Note</button>
+            </div>
+          </div>
           <div class="cwr-two-col compact"><label>Meeting Date<input type="date" name="meeting_date" value="{{ today_value }}" required></label><label>Location<input type="text" value="{{ shelter or 'Office' }}" readonly></label></div>
           <div class="cwr-note-grid">
             <label>Case Summary<textarea name="notes" rows="4" placeholder="Summarize the resident contact and key discussion from today">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea></label>
