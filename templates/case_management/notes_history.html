@@ -2,6 +2,20 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
+<style>
+  .progress-notes-history .cmx-card,
+  .progress-notes-history .cmx-summary-text,
+  .progress-notes-history details,
+  .progress-notes-history details div {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .progress-notes-history .cmx-summary-text {
+    white-space: normal;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -11,7 +25,7 @@
   </a>
 </div>
 
-<div class="cmx-page">
+<div class="cmx-page progress-notes-history">
   <div class="cmx-shell">
 
     <div class="cmx-card">
