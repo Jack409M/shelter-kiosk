@@ -49,6 +49,7 @@ from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
     seed_demo_data_view,
+    admin_test_alert_view,
 )
 from routes.admin_parts.users import (
     admin_add_user_view,
@@ -88,6 +89,13 @@ def admin_role_permissions():
 @require_shelter
 def admin_system_health():
     return system_health_dashboard_view()
+
+
+@admin.post("/staff/admin/test-alert")
+@require_login
+@require_shelter
+def admin_test_alert():
+    return admin_test_alert_view()
 
 
 @admin.route("/staff/admin/backup-documentation", methods=["GET"])
