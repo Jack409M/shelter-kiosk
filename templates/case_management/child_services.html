@@ -4,7 +4,7 @@
 <h1>Child Services</h1>
 
 <div style="margin-bottom:10px;">
-  <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+  <a class="btn" href="{{ back_url }}">
     Back to Resident
   </a>
 </div>
@@ -12,6 +12,8 @@
 <div class="card">
   <form method="post">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="return_to" value="{{ return_to }}">
+    <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
     <label><strong>Service Date</strong></label>
     <input type="date" name="service_date">
@@ -92,7 +94,7 @@
             <td>{{ outcome|replace("_", " ")|title if outcome else "—" }}</td>
 
             <td>
-              <a class="btn btn-sm" href="{{ url_for('case_management.edit_child_service', service_id=service_id) }}">
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_child_service', service_id=service_id, return_to=return_to, active_panel=active_panel) }}">
                 Edit
               </a>
 
@@ -100,6 +102,8 @@
                     action="{{ url_for('case_management.delete_child_service', service_id=service_id) }}"
                     style="display:inline;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="return_to" value="{{ return_to }}">
+                <input type="hidden" name="active_panel" value="{{ active_panel }}">
                 <button type="submit" class="btn btn-sm">Delete</button>
               </form>
             </td>
