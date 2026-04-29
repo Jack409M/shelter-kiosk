@@ -66,36 +66,55 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
     return count > limit
 
 
-def send_sms(to_number: str, message: str, enforce_consent: bool = True) -> None:
+def sms_delivery_ready() -> tuple[bool, str]:
+    if os.environ.get("SMS_SYSTEM_ENABLED", "true").lower() != "true":
+        return False, "SMS_SYSTEM_ENABLED is not true"
+
+    if not TWILIO_ENABLED:
+        return False, "TWILIO_ENABLED is not true"
+
+    if not Client:
+        return False, "Twilio client library is not available"
+
+    missing = []
+    if not TWILIO_ACCOUNT_SID:
+        missing.append("TWILIO_ACCOUNT_SID")
+    if not TWILIO_AUTH_TOKEN:
+        missing.append("TWILIO_AUTH_TOKEN")
+    if not TWILIO_FROM_NUMBER:
+        missing.append("TWILIO_FROM_NUMBER")
+
+    if missing:
+        return False, "Missing " + ", ".join(missing)
+
+    return True, "ready"
+
+
+def send_sms(to_number: str, message: str, enforce_consent: bool = True) -> bool:
     """
     Outbound SMS sender with:
     global panic switch,
     Twilio enable gate,
     optional consent enforcement,
     per number and global rate limiting.
-    """
-    if os.environ.get("SMS_SYSTEM_ENABLED", "true").lower() != "true":
-        return
 
-    if not TWILIO_ENABLED:
-        return
+    Returns True when a Twilio send was attempted successfully and False when
+    the message was skipped or failed.
+    """
+    ready, _reason = sms_delivery_ready()
+    if not ready:
+        return False
 
     if enforce_consent:
         try:
             if not sms_is_allowed_for_number(to_number):
-                return
+                return False
         except Exception:
-            return
-
-    if not Client:
-        return
-
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
-        return
+            return False
 
     to_e164 = _normalize_to_e164(to_number)
     if not to_e164:
-        return
+        return False
 
     try:
         per_number_per_hour = int(os.environ.get("SMS_OUTBOUND_PER_NUMBER_PER_HOUR", "6"))
@@ -112,10 +131,10 @@ def send_sms(to_number: str, message: str, enforce_consent: bool = True) -> None
     to10 = _normalize_us_phone_10(to_e164) or to_e164
 
     if _rate_limited("sms_out_global", global_per_minute, 60):
-        return
+        return False
 
     if _rate_limited(f"sms_out_to:{to10}", per_number_per_hour, 3600):
-        return
+        return False
 
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -125,5 +144,7 @@ def send_sms(to_number: str, message: str, enforce_consent: bool = True) -> None
             kwargs["status_callback"] = TWILIO_STATUS_CALLBACK_URL
 
         client.messages.create(**kwargs)
+        return True
     except Exception as e:
         print("SMS error:", e)
+        return False
