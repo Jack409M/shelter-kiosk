@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, redirect, render_template, session, url_for
 
 from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_fetchone
@@ -55,10 +55,6 @@ def _require_case_manager_access():
 
 def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
-
-
-def _legacy_workspace_requested() -> bool:
-    return (request.args.get("legacy_workspace") or "").strip() == "1"
 
 
 def _is_active_enrollment(enrollment: dict | None) -> bool:
@@ -210,7 +206,7 @@ def resident_case_view(resident_id: int):
 
     enrollment = load_current_enrollment(resident_id, shelter)
 
-    if _is_active_enrollment(enrollment) and not _legacy_workspace_requested():
+    if _is_active_enrollment(enrollment):
         return redirect(url_for("case_management.cwr_workspace", resident_id=resident_id))
 
     enrollment_id = enrollment["id"] if enrollment else None
