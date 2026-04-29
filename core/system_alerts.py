@@ -4,6 +4,7 @@ from typing import Any
 
 from flask import current_app, g, session
 
+from core.alert_delivery import deliver_system_alert
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
@@ -130,6 +131,22 @@ def create_system_alert(
             now,
         ),
     )
+
+    try:
+        deliver_system_alert(
+            {
+                "alert_key": normalized_key,
+                "alert_type": normalized_alert_type,
+                "severity": _normalize_severity(severity),
+                "title": normalized_title,
+                "message": normalized_message,
+                "source_module": normalized_source,
+                "metadata": _normalize_text(metadata),
+            }
+        )
+    except Exception:
+        current_app.logger.exception("system_alert_delivery_failed")
+
     return True
 
 
