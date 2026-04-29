@@ -8,6 +8,7 @@ from werkzeug.wrappers import Response
 from core.audit import log_action
 from core.demo_seed import clear_demo_seed, get_demo_seed_counts, run_demo_seed
 from core.runtime import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
+from core.system_alerts import create_system_alert
 from routes.admin_parts.helpers import require_admin_role as _require_admin
 
 
@@ -38,6 +39,14 @@ def _require_dangerous_admin_access() -> Response | None:
 
     if not ENABLE_DANGEROUS_ADMIN_ROUTES:
         abort(404)
+
+    return None
+
+
+def _require_standard_admin_access() -> Response | None:
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
 
     return None
 
@@ -75,6 +84,44 @@ def _seed_detail(result: dict[str, Any]) -> str:
 def _clear_detail(result: dict[str, Any]) -> str:
     resident_count = int(result.get("resident_count", 0) or 0)
     return f"resident_count={resident_count}"
+
+
+def admin_test_alert_view():
+    denied = _require_standard_admin_access()
+    if denied is not None:
+        return denied
+
+    if request.method != "POST":
+        abort(405)
+
+    staff_user_id = _staff_user_id()
+    alert_key = f"test:manual:error:staff:{staff_user_id or 'unknown'}"
+
+    created = create_system_alert(
+        alert_type="test",
+        severity="error",
+        title="Test Alert",
+        message="This is a test alert to verify system alert delivery.",
+        source_module="admin_test_alert",
+        alert_key=alert_key,
+        metadata=f"triggered_by_staff_user_id={staff_user_id or ''}",
+    )
+
+    log_action(
+        "admin",
+        None,
+        None,
+        staff_user_id,
+        "test_alert_triggered",
+        {"created": created, "alert_key": alert_key},
+    )
+
+    if created:
+        flash("Test alert triggered. Check Active Alerts and recent System Health events.", "success")
+    else:
+        flash("A matching test alert is already open. Resolve it before sending another.", "warning")
+
+    return redirect(url_for("admin.admin_system_health"))
 
 
 def admin_demo_data_view():
