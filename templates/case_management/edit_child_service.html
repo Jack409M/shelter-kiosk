@@ -14,19 +14,16 @@
 <h1>Edit Child Service</h1>
 
 <div style="margin-bottom:10px;">
-  {% if resident_id %}
-    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-      ← Back to Resident
-    </a>
-  {% endif %}
-  <a class="btn" href="{{ url_for('case_management.child_services', child_id=child_id) }}">
-    Back to Child Services
+  <a class="btn" href="{{ back_url }}">
+    Back
   </a>
 </div>
 
 <div class="card">
   <form method="post" action="{{ url_for('case_management.edit_child_service', service_id=service_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="return_to" value="{{ return_to }}">
+    <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
     <label><strong>Service Date</strong></label>
     <input type="date" name="service_date" value="{{ service_date or '' }}">
@@ -64,7 +61,7 @@
 
     <div style="margin-top:10px;">
       <button type="submit">Update Service</button>
-      <a class="btn" href="{{ url_for('case_management.child_services', child_id=child_id) }}">Cancel</a>
+      <a class="btn" href="{{ done_url }}">Done</a>
     </div>
   </form>
 </div>
