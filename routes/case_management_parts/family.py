@@ -117,9 +117,22 @@ def _quick_add_requested() -> bool:
     return (request.form.get("redirect_to") or "").strip().lower() == "resident_case"
 
 
-def _child_services_redirect(child_id: int):
+def _child_services_url(child_id: int):
     query_args = _return_query_args(CHILD_SERVICES_ACTIVE_PANEL)
-    return redirect(url_for("case_management.child_services", child_id=child_id, **query_args))
+    return url_for("case_management.child_services", child_id=child_id, **query_args)
+
+
+def _child_services_redirect(child_id: int):
+    return redirect(_child_services_url(child_id))
+
+
+def _edit_child_service_url(service_id: int):
+    query_args = _return_query_args(CHILD_SERVICES_ACTIVE_PANEL)
+    return url_for("case_management.edit_child_service", service_id=service_id, **query_args)
+
+
+def _edit_child_service_redirect(service_id: int):
+    return redirect(_edit_child_service_url(service_id))
 
 
 def _post_child_service_redirect(child_id: int, resident_id: int):
@@ -795,6 +808,7 @@ def edit_child_service_view(service_id: int):
         return redirect(url_for("case_management.index"))
 
     resident_id = service["resident_id"]
+    child_id = service["resident_child_id"]
 
     if request.method == "POST":
         validated, errors = validate_child_service_form(request.form)
@@ -802,7 +816,7 @@ def edit_child_service_view(service_id: int):
         if errors:
             for error in errors:
                 flash(error, "error")
-            return redirect(url_for("case_management.edit_child_service", service_id=service_id))
+            return _edit_child_service_redirect(service_id)
 
         ph = placeholder()
 
@@ -841,15 +855,20 @@ def edit_child_service_view(service_id: int):
                 "Unable to update child service. Please try again or contact an administrator.",
                 "error",
             )
-            return redirect(url_for("case_management.edit_child_service", service_id=service_id))
+            return _edit_child_service_redirect(service_id)
 
         flash("Service updated.", "success")
-        return _resident_case_redirect(resident_id)
+        return _done_redirect(resident_id, CHILD_SERVICES_ACTIVE_PANEL)
 
     return render_template(
         "case_management/edit_child_service.html",
         service=service,
         resident_id=resident_id,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(CHILD_SERVICES_ACTIVE_PANEL),
+        back_url=_child_services_url(child_id),
+        done_url=_done_url(resident_id, CHILD_SERVICES_ACTIVE_PANEL),
+        edit_child_service_url=_edit_child_service_url(service_id),
     )
 
 
@@ -899,10 +918,10 @@ def delete_child_service_view(service_id: int):
             "Unable to remove child service. Please try again or contact an administrator.",
             "error",
         )
-        return redirect(url_for("case_management.child_services", child_id=child_id))
+        return _child_services_redirect(child_id)
 
     flash("Service deleted.", "success")
-    return _resident_case_redirect(resident_id)
+    return _done_redirect(resident_id, CHILD_SERVICES_ACTIVE_PANEL)
 
 
 def child_services_view(child_id: int):
@@ -924,7 +943,7 @@ def child_services_view(child_id: int):
 
     if not enrollment:
         flash("No active enrollment found.", "error")
-        return _resident_case_redirect(resident_id)
+        return _done_redirect(resident_id, CHILD_SERVICES_ACTIVE_PANEL)
 
     enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
     ph = placeholder()
@@ -996,7 +1015,7 @@ def child_services_view(child_id: int):
             return _post_child_service_redirect(child_id, resident_id)
 
         flash("Child service added.", "success")
-        return _resident_case_redirect(resident_id)
+        return _done_redirect(resident_id, CHILD_SERVICES_ACTIVE_PANEL)
 
     services = db_fetchall(
         f"""
@@ -1021,4 +1040,8 @@ def child_services_view(child_id: int):
         child_id=child_id,
         resident_id=resident_id,
         services=services,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(CHILD_SERVICES_ACTIVE_PANEL),
+        back_url=_done_url(resident_id, CHILD_SERVICES_ACTIVE_PANEL),
+        done_url=_done_url(resident_id, CHILD_SERVICES_ACTIVE_PANEL),
     )
