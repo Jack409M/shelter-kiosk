@@ -28,8 +28,7 @@ def _redirect_resident_case(resident_id: int):
 
 
 def _form_came_from_cwr() -> bool:
-    referrer = request.referrer or ""
-    return request.form.get("redirect_to") == "cwr" or f"/staff/case-management/" in referrer and referrer.rstrip("/").endswith("/cwr")
+    return (request.form.get("redirect_to") or "").strip().lower() == "cwr"
 
 
 def _infer_active_panel() -> str | None:
