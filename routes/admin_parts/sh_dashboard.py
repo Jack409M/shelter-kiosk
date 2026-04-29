@@ -7,6 +7,10 @@ from zoneinfo import ZoneInfo
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 
 from core.db import db_fetchone
+from core.enterprise_readiness import (
+    build_enterprise_readiness_cards,
+    sync_enterprise_readiness_alerts,
+)
 from core.sh_events import latest_sh_event_by_status, recent_sh_events_by_status
 from core.system_alerts import (
     count_open_system_alerts_by_severity,
@@ -293,7 +297,7 @@ def system_health_dashboard_view():
 
     checked_at = datetime.now(CHICAGO_TZ).replace(microsecond=0).isoformat()
 
-    cards = [
+    runtime_cards = [
         _check_database_status(),
         _app_version_status(),
         _check_scheduler_status(),
@@ -302,9 +306,12 @@ def system_health_dashboard_view():
         _pass_cleanup_card(),
         *_job_status_cards(),
     ]
+    enterprise_cards = build_enterprise_readiness_cards()
+    cards = [*runtime_cards, *enterprise_cards]
 
     _pass_cleanup_watchdog()
-    sync_system_health_alerts(cards)
+    sync_system_health_alerts(runtime_cards)
+    sync_enterprise_readiness_alerts(enterprise_cards)
     alerts = load_open_system_alerts()
     alert_counts = count_open_system_alerts_by_severity()
 
@@ -318,6 +325,8 @@ def system_health_dashboard_view():
         "sh_dashboard.html",
         title="System Health",
         cards=cards,
+        runtime_cards=runtime_cards,
+        enterprise_cards=enterprise_cards,
         alerts=alerts,
         alert_counts=alert_counts,
         summary_state=summary_state,
