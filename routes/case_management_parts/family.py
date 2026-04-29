@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from urllib.parse import urlparse
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
@@ -38,15 +37,6 @@ def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
 
 
-def _referrer_is_cwr() -> bool:
-    referrer = request.referrer or ""
-    if not referrer:
-        return False
-
-    referrer_path = urlparse(referrer).path.rstrip("/")
-    return f"/staff/case-management/" in referrer_path and referrer_path.endswith("/cwr")
-
-
 def _form_came_from_cwr() -> bool:
     return_to = (
         request.form.get("return_to")
@@ -56,7 +46,7 @@ def _form_came_from_cwr() -> bool:
         or ""
     ).strip().lower()
 
-    return return_to == "cwr" or _referrer_is_cwr()
+    return return_to == "cwr"
 
 
 def _active_panel(default_panel: str = FAMILY_ACTIVE_PANEL) -> str:
@@ -140,7 +130,13 @@ def _post_child_service_redirect(child_id: int, resident_id: int):
         return _done_redirect(resident_id, CHILD_SERVICES_ACTIVE_PANEL)
 
     if _quick_add_requested():
-        return _resident_case_redirect(resident_id)
+        return redirect(
+            url_for(
+                "case_management.cwr_workspace",
+                resident_id=resident_id,
+                active_panel=CHILD_SERVICES_ACTIVE_PANEL,
+            )
+        )
     return _child_services_redirect(child_id)
 
 
