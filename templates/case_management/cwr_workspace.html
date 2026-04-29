@@ -71,15 +71,14 @@
 
     <div class="cwr-control-row">
       <div>
-        <div class="cwr-preview-label">Preview Workspace</div>
-        <div class="cwr-preview-subtitle">Case Manager Workspace Renovation</div>
+        <div class="cwr-preview-label">Primary Workspace</div>
+        <div class="cwr-preview-subtitle">Case Manager Workspace</div>
       </div>
       <div class="cwr-mode-toggle" aria-label="Workspace mode">
         <button type="button" class="cwr-mode-btn{% if not starts_in_meeting %} is-active{% endif %}" data-mode="review">Review</button>
         <button type="button" class="cwr-mode-btn{% if starts_in_meeting %} is-active{% endif %}" data-mode="meeting">Meeting</button>
         <button type="button" class="cwr-mode-btn" data-mode="budget">Budget Meeting</button>
       </div>
-      <a class="cwr-back-link" href="{{ url_for('case_management.resident_case', resident_id=resident_id, legacy_workspace=1) }}">Back to Original Workspace</a>
     </div>
 
     <section id="cwr-review" class="cwr-mode{% if not starts_in_meeting %} is-active{% endif %}">
