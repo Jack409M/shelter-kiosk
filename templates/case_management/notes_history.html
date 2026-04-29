@@ -42,7 +42,7 @@
               <div class="cmx-row-block">
                 <strong>{{ note.meeting_date or "—" }}</strong>
                 <span>
-                  <a href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note.id) }}">Edit</a> |
+                  <a href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note.id, return_to=return_to, active_panel=active_panel) }}">Edit</a> |
                   <a href="{{ url_for('case_management.progress_report_print', resident_id=resident_id, update_id=note.id) }}" target="_blank">Print</a>
                 </span>
               </div>
