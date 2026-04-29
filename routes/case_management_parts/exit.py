@@ -27,6 +27,10 @@ def _row_value(row: Any, key: str, index: int):
     return row[index]
 
 
+def _redirect_case_index():
+    return redirect(url_for("case_management.index"))
+
+
 def _ensure_exit_assessment_columns() -> None:
     with contextlib.suppress(Exception):
         db_execute(
@@ -367,11 +371,11 @@ def exit_assessment_form_view(resident_id: int):
 
     if not resident:
         flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
+        return _redirect_case_index()
 
     if not enrollment:
         flash("This resident does not have a program enrollment yet.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _redirect_case_index()
 
     enrollment_id = _row_value(enrollment, "id", 0)
     form_data = _load_exit_form_data(enrollment_id)
@@ -396,11 +400,11 @@ def submit_exit_assessment_view(resident_id: int):
 
     if not resident:
         flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
+        return _redirect_case_index()
 
     if not enrollment:
         flash("This resident does not have a program enrollment yet.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _redirect_case_index()
 
     entry_date = _row_value(enrollment, "entry_date", 3)
     enrollment_id = _row_value(enrollment, "id", 0)
@@ -433,4 +437,4 @@ def submit_exit_assessment_view(resident_id: int):
     if from_l9:
         return redirect(url_for("case_management.l9_complete", resident_id=resident_id))
 
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+    return _redirect_case_index()
