@@ -73,8 +73,11 @@
 </div>
 {% endif %}
 
-<div class="card">
+<div class="card" style="margin-bottom:16px;">
   <h2 class="card-title-large">System Checks</h2>
+  <p class="card-subtitle">
+    Core runtime checks for database, scheduler, SMS, backups, version, and job events.
+  </p>
 
   <div class="table-shell">
     <table class="app-table">
@@ -87,7 +90,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for card in cards %}
+        {% for card in runtime_cards %}
           <tr>
             <td>
               {% if card.state == "ok" %}
@@ -108,6 +111,46 @@
               {% endif %}
             </td>
             <td>{{ card.meta }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="card-title-large">Enterprise Readiness</h2>
+  <p class="card-subtitle">
+    Visibility into alerting, role security, identity providers, disaster recovery, analytics, and compliance readiness.
+  </p>
+
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Control</th>
+          <th>Detail</th>
+          <th>Owner</th>
+          <th>Next Step</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in enterprise_cards %}
+          <tr>
+            <td>
+              {% if card.state == "ok" %}
+                <strong>OK</strong>
+              {% elif card.state == "warn" %}
+                <strong>Warning</strong>
+              {% else %}
+                <strong>Error</strong>
+              {% endif %}
+            </td>
+            <td>{{ card.label }}</td>
+            <td>{{ card.detail }}</td>
+            <td>{{ card.owner }}</td>
+            <td>{{ card.next_step }}</td>
           </tr>
         {% endfor %}
       </tbody>
