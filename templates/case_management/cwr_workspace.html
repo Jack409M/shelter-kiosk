@@ -177,13 +177,13 @@
 
           <section {{ panel('employment') }}>{{ module_panel('Employment', 'Employment is managed by the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id, return_to='cwr', active_panel='employment'), 'Open Employment And Income') }}</section>
           <section {{ panel('income') }}>{{ module_panel('Monthly Income', 'Monthly income is calculated through the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id, return_to='cwr', active_panel='income'), 'Open Employment And Income') }}</section>
-          <section {{ panel('ua') }}>{{ module_panel('UA', 'Use the UA module for add, history, and edit flow.', url_for('case_management.ua_log', resident_id=resident_id), 'Open UA Module') }}</section>
-          <section {{ panel('medications') }}>{{ module_panel('Medications', 'Use the medications module for the medication list, add, and edit flow.', url_for('case_management.medications', resident_id=resident_id), 'Open Medication Module') }}</section>
-          <section {{ panel('family') }}>{{ module_panel('Family Changes', 'Family changes are managed through the family intake module.', url_for('case_management.family_intake', resident_id=resident_id), 'Open Family Intake') }}</section>
-          <section {{ panel('child-services') }}>{% if children %}{{ module_panel('Child Services', 'Use the child services module for service history, add, edit, and delete flow.', url_for('case_management.child_services', child_id=children[0]['id']), 'Open Child Services') }}{% else %}{{ module_panel('Child Services', 'No active child records are on file. Add or update children through Family Intake.', url_for('case_management.family_intake', resident_id=resident_id), 'Open Family Intake') }}{% endif %}</section>
+          <section {{ panel('ua') }}>{{ module_panel('UA', 'Use the UA module for add, history, and edit flow.', url_for('case_management.ua_log', resident_id=resident_id, return_to='cwr', active_panel='ua'), 'Open UA Module') }}</section>
+          <section {{ panel('medications') }}>{{ module_panel('Medications', 'Use the medications module for the medication list, add, and edit flow.', url_for('case_management.medications', resident_id=resident_id, return_to='cwr', active_panel='medications'), 'Open Medication Module') }}</section>
+          <section {{ panel('family') }}>{{ module_panel('Family Changes', 'Family changes are managed through the family intake module.', url_for('case_management.family_intake', resident_id=resident_id, return_to='cwr', active_panel='family'), 'Open Family Intake') }}</section>
+          <section {{ panel('child-services') }}>{% if children %}{{ module_panel('Child Services', 'Use the child services module for service history, add, edit, and delete flow.', url_for('case_management.child_services', child_id=children[0]['id'], return_to='cwr', active_panel='child-services'), 'Open Child Services') }}{% else %}{{ module_panel('Child Services', 'No active child records are on file. Add or update children through Family Intake.', url_for('case_management.family_intake', resident_id=resident_id, return_to='cwr', active_panel='child-services'), 'Open Family Intake') }}{% endif %}</section>
           <section {{ panel('step') }}>{{ module_panel('Step Level', 'Step level is managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='step'), 'Open Recovery Profile') }}</section>
           <section {{ panel('sponsor') }}>{{ module_panel('Sponsor', 'Sponsor information is managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='sponsor'), 'Open Recovery Profile') }}</section>
-          <section {{ panel('writeups') }}>{{ module_panel('Write Ups', 'Write ups are managed in the resident write up workspace.', url_for('writeups.resident_writeups', resident_id=resident_id), 'Open Write Ups') }}</section>
+          <section {{ panel('writeups') }}>{{ module_panel('Write Ups', 'Write ups are managed in the resident write up workspace.', url_for('writeups.resident_writeups', resident_id=resident_id, return_to='cwr', active_panel='writeups'), 'Open Write Ups') }}</section>
           <section {{ panel('sobriety') }}>{{ module_panel('Sobriety Or Treatment', 'Sobriety and treatment fields are managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='sobriety'), 'Open Recovery Profile') }}</section>
         </div>
       </div>
@@ -191,14 +191,14 @@
 
     <section id="cwr-budget" class="cwr-mode">
       <div class="cwr-workspace-intro"><h2>Budget Meeting</h2><p>Use this mode for budget specific reviews.</p></div>
-      <div class="cwr-review-grid"><a class="cwr-card cwr-action" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}"><span class="cwr-card-label">Budget</span><span class="cwr-card-value">Open Budget</span><span class="cwr-card-sub">Review or create a budget session.</span></a><div class="cwr-card"><div class="cwr-card-label">Income</div><div class="cwr-card-value">{{ '$%.2f'|format(rs_income) if rs_income is not none else '—' }}</div><div class="cwr-card-sub">Current income snapshot.</div></div><div class="cwr-card"><div class="cwr-card-label">Employment</div><div class="cwr-card-value">{{ rs_employer or '—' }}</div><div class="cwr-card-sub">Current employer on file.</div></div></div>
+      <div class="cwr-review-grid"><a class="cwr-card cwr-action" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id, return_to='cwr', active_panel='budget') }}"><span class="cwr-card-label">Budget</span><span class="cwr-card-value">Open Budget</span><span class="cwr-card-sub">Review or create a budget session.</span></a><div class="cwr-card"><div class="cwr-card-label">Income</div><div class="cwr-card-value">{{ '$%.2f'|format(rs_income) if rs_income is not none else '—' }}</div><div class="cwr-card-sub">Current income snapshot.</div></div><div class="cwr-card"><div class="cwr-card-label">Employment</div><div class="cwr-card-value">{{ rs_employer or '—' }}</div><div class="cwr-card-sub">Current employer on file.</div></div></div>
     </section>
   </div>
 </div>
 
 <script>
   window.RESIDENT_CASE_RESIDENT_ID = "{{ resident_id }}";
-  window.RESIDENT_CASE_CHILD_SERVICE_BASE_ACTION = "{{ url_for('case_management.child_services', child_id=0) }}";
+  window.RESIDENT_CASE_CHILD_SERVICE_BASE_ACTION = "{{ url_for('case_management.child_services', child_id=0, return_to='cwr', active_panel='child-services') }}";
   window.RESIDENT_CASE_NOTE_SAVED = {{ 'true' if request.args.get('case_note_saved') == '1' else 'false' }};
   window.CWR_NOTE_EDIT_BY_DATE = {{ cwr_note_edit_by_date | tojson }};
   window.CWR_NOTE_VALUES_BY_DATE = {{ cwr_note_values_by_date | tojson }};
