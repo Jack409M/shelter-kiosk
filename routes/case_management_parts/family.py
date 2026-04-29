@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from urllib.parse import urlparse
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
@@ -21,12 +22,95 @@ from routes.case_management_parts.helpers import (
 from routes.case_management_parts.income_state_sync import recalculate_and_sync_income_state_atomic
 
 
+FAMILY_ACTIVE_PANEL = "family"
+CHILD_SERVICES_ACTIVE_PANEL = "child-services"
+
+
+def _resident_case_url(resident_id: int):
+    return url_for("case_management.resident_case", resident_id=resident_id)
+
+
 def _resident_case_redirect(resident_id: int):
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+    return redirect(_resident_case_url(resident_id))
 
 
 def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
+
+
+def _referrer_is_cwr() -> bool:
+    referrer = request.referrer or ""
+    if not referrer:
+        return False
+
+    referrer_path = urlparse(referrer).path.rstrip("/")
+    return f"/staff/case-management/" in referrer_path and referrer_path.endswith("/cwr")
+
+
+def _form_came_from_cwr() -> bool:
+    return_to = (
+        request.form.get("return_to")
+        or request.form.get("redirect_to")
+        or request.args.get("return_to")
+        or request.args.get("redirect_to")
+        or ""
+    ).strip().lower()
+
+    return return_to == "cwr" or _referrer_is_cwr()
+
+
+def _active_panel(default_panel: str = FAMILY_ACTIVE_PANEL) -> str:
+    return (
+        request.form.get("active_panel")
+        or request.args.get("active_panel")
+        or default_panel
+    ).strip() or default_panel
+
+
+def _return_query_args(default_panel: str = FAMILY_ACTIVE_PANEL) -> dict:
+    if not _form_came_from_cwr():
+        return {}
+
+    return {
+        "return_to": "cwr",
+        "active_panel": _active_panel(default_panel),
+    }
+
+
+def _cwr_url(resident_id: int, default_panel: str = FAMILY_ACTIVE_PANEL):
+    return url_for(
+        "case_management.cwr_workspace",
+        resident_id=resident_id,
+        active_panel=_active_panel(default_panel),
+    )
+
+
+def _done_url(resident_id: int, default_panel: str = FAMILY_ACTIVE_PANEL):
+    if _form_came_from_cwr():
+        return _cwr_url(resident_id, default_panel)
+    return _resident_case_url(resident_id)
+
+
+def _done_redirect(resident_id: int, default_panel: str = FAMILY_ACTIVE_PANEL):
+    return redirect(_done_url(resident_id, default_panel))
+
+
+def _family_intake_url(resident_id: int):
+    query_args = _return_query_args(FAMILY_ACTIVE_PANEL)
+    return url_for("case_management.family_intake", resident_id=resident_id, **query_args)
+
+
+def _family_intake_redirect(resident_id: int):
+    return redirect(_family_intake_url(resident_id))
+
+
+def _edit_child_url(child_id: int):
+    query_args = _return_query_args(FAMILY_ACTIVE_PANEL)
+    return url_for("case_management.edit_child", child_id=child_id, **query_args)
+
+
+def _edit_child_redirect(child_id: int):
+    return redirect(_edit_child_url(child_id))
 
 
 def _quick_add_requested() -> bool:
@@ -34,10 +118,14 @@ def _quick_add_requested() -> bool:
 
 
 def _child_services_redirect(child_id: int):
-    return redirect(url_for("case_management.child_services", child_id=child_id))
+    query_args = _return_query_args(CHILD_SERVICES_ACTIVE_PANEL)
+    return redirect(url_for("case_management.child_services", child_id=child_id, **query_args))
 
 
 def _post_child_service_redirect(child_id: int, resident_id: int):
+    if _form_came_from_cwr():
+        return _done_redirect(resident_id, CHILD_SERVICES_ACTIVE_PANEL)
+
     if _quick_add_requested():
         return _resident_case_redirect(resident_id)
     return _child_services_redirect(child_id)
@@ -334,6 +422,10 @@ def _render_family_intake_error(resident_id: int, message: str):
         "case_management/family_intake.html",
         resident_id=resident_id,
         children=children,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(FAMILY_ACTIVE_PANEL),
+        back_url=_done_url(resident_id, FAMILY_ACTIVE_PANEL),
+        done_url=_done_url(resident_id, FAMILY_ACTIVE_PANEL),
     )
 
 
@@ -363,6 +455,10 @@ def family_intake_view(resident_id: int):
                 "case_management/family_intake.html",
                 resident_id=resident_id,
                 children=children,
+                return_to="cwr" if _form_came_from_cwr() else "",
+                active_panel=_active_panel(FAMILY_ACTIVE_PANEL),
+                back_url=_done_url(resident_id, FAMILY_ACTIVE_PANEL),
+                done_url=_done_url(resident_id, FAMILY_ACTIVE_PANEL),
             )
 
         existing_child = db_fetchone(
@@ -491,7 +587,7 @@ def family_intake_view(resident_id: int):
             )
 
         flash("Child added.", "success")
-        return _resident_case_redirect(resident_id)
+        return _done_redirect(resident_id, FAMILY_ACTIVE_PANEL)
 
     children = _active_children_for_resident(resident_id)
 
@@ -499,6 +595,10 @@ def family_intake_view(resident_id: int):
         "case_management/family_intake.html",
         resident_id=resident_id,
         children=children,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(FAMILY_ACTIVE_PANEL),
+        back_url=_done_url(resident_id, FAMILY_ACTIVE_PANEL),
+        done_url=_done_url(resident_id, FAMILY_ACTIVE_PANEL),
     )
 
 
@@ -523,7 +623,7 @@ def edit_child_view(child_id: int):
         if errors:
             for error in errors:
                 flash(error, "error")
-            return redirect(url_for("case_management.edit_child", child_id=child_id))
+            return _edit_child_redirect(child_id)
 
         ph = placeholder()
         existing_child = db_fetchone(
@@ -551,7 +651,7 @@ def edit_child_view(child_id: int):
 
         if existing_child:
             flash("This child already exists for this resident.", "error")
-            return redirect(url_for("case_management.edit_child", child_id=child_id))
+            return _edit_child_redirect(child_id)
 
         try:
             with db_transaction():
@@ -595,7 +695,7 @@ def edit_child_view(child_id: int):
         except Exception as exc:
             if _is_unique_constraint_error(exc):
                 flash("This child already exists for this resident.", "error")
-                return redirect(url_for("case_management.edit_child", child_id=child_id))
+                return _edit_child_redirect(child_id)
 
             current_app.logger.exception(
                 "Failed to edit child_id=%s resident_id=%s",
@@ -603,14 +703,18 @@ def edit_child_view(child_id: int):
                 resident_id,
             )
             flash("Unable to update child. Please try again or contact an administrator.", "error")
-            return redirect(url_for("case_management.edit_child", child_id=child_id))
+            return _edit_child_redirect(child_id)
 
         flash("Child updated.", "success")
-        return _resident_case_redirect(resident_id)
+        return _done_redirect(resident_id, FAMILY_ACTIVE_PANEL)
 
     return render_template(
         "case_management/edit_child.html",
         child=child,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(FAMILY_ACTIVE_PANEL),
+        back_url=_family_intake_url(resident_id),
+        done_url=_done_url(resident_id, FAMILY_ACTIVE_PANEL),
     )
 
 
@@ -671,10 +775,10 @@ def delete_child_view(child_id: int):
             resident_id,
         )
         flash("Unable to remove child. Please try again or contact an administrator.", "error")
-        return redirect(url_for("case_management.family_intake", resident_id=resident_id))
+        return _family_intake_redirect(resident_id)
 
     flash("Child removed.", "success")
-    return _resident_case_redirect(resident_id)
+    return _done_redirect(resident_id, FAMILY_ACTIVE_PANEL)
 
 
 def edit_child_service_view(service_id: int):
