@@ -1,8 +1,9 @@
 {% extends "layout.html" %}
 
 {% block content %}
-{% set came_from_cwr = (request.args.get('return_to') == 'cwr') or ('/cwr' in (request.referrer or '')) %}
-{% set back_url = url_for('case_management.cwr_workspace', resident_id=resident['id'], active_panel='budget') if came_from_cwr else url_for('case_management.resident_case', resident_id=resident['id']) %}
+{% set came_from_cwr = request.args.get('return_to') == 'cwr' %}
+{% set active_panel = request.args.get('active_panel') or 'budget' %}
+{% set back_url = url_for('case_management.cwr_workspace', resident_id=resident['id'], active_panel=active_panel) if came_from_cwr else url_for('case_management.resident_case', resident_id=resident['id']) %}
 
 <div class="budget-page">
   <section class="budget-card">
@@ -22,7 +23,7 @@
 
       <a
         class="app-btn-pill app-btn-pill-dark"
-        href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=current_budget['id'], return_to='cwr', active_panel='budget') if came_from_cwr else url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=current_budget['id']) }}"
+        href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=current_budget['id'], return_to='cwr', active_panel=active_panel) if came_from_cwr else url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=current_budget['id']) }}"
       >
         Open {{ current_budget['budget_month_label'] }}
       </a>
@@ -38,7 +39,7 @@
       <input type="hidden" name="budget_month" value="{{ suggested_budget_month }}">
       {% if came_from_cwr %}
       <input type="hidden" name="return_to" value="cwr">
-      <input type="hidden" name="active_panel" value="budget">
+      <input type="hidden" name="active_panel" value="{{ active_panel }}">
       {% endif %}
 
       <button class="app-btn-pill app-btn-pill-dark" type="submit">
@@ -56,7 +57,7 @@
 
         <a
           class="app-btn-pill app-btn-pill-outline"
-          href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id'], return_to='cwr', active_panel='budget') if came_from_cwr else url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id']) }}"
+          href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id'], return_to='cwr', active_panel=active_panel) if came_from_cwr else url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id']) }}"
         >
           Open
         </a>
@@ -65,7 +66,7 @@
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           {% if came_from_cwr %}
           <input type="hidden" name="return_to" value="cwr">
-          <input type="hidden" name="active_panel" value="budget">
+          <input type="hidden" name="active_panel" value="{{ active_panel }}">
           {% endif %}
           <button class="app-btn-pill" type="submit">Delete</button>
         </form>
