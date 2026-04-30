@@ -65,6 +65,20 @@ def _medications_redirect(resident_id: int):
     return redirect(_medications_url(resident_id))
 
 
+def _edit_medication_url(resident_id: int, medication_id: int):
+    query_args = _return_query_args()
+    return url_for(
+        "case_management.edit_medication",
+        resident_id=resident_id,
+        medication_id=medication_id,
+        **query_args,
+    )
+
+
+def _edit_medication_redirect(resident_id: int, medication_id: int):
+    return redirect(_edit_medication_url(resident_id, medication_id))
+
+
 def _cwr_url(resident_id: int):
     return url_for(
         "case_management.cwr_workspace",
@@ -306,7 +320,7 @@ def edit_medication_view(resident_id: int, medication_id: int):
     data, error = validate_medication_form(request.form)
     if error:
         flash(error, "error")
-        return _post_submit_redirect(resident_id)
+        return _edit_medication_redirect(resident_id, medication_id)
 
     now = utcnow_iso()
 
@@ -352,7 +366,7 @@ def edit_medication_view(resident_id: int, medication_id: int):
             resident_id,
         )
         flash("Unable to update medication. Please try again or contact an administrator.", "error")
-        return _post_submit_redirect(resident_id)
+        return _edit_medication_redirect(resident_id, medication_id)
 
     flash("Medication updated.", "success")
     return _post_submit_redirect(resident_id)
