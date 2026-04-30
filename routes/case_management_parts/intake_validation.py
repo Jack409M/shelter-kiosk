@@ -30,6 +30,13 @@ class IntakeFormLike(Protocol):
 
 INTERNAL_PRESENT_FIELDS_KEY = "__present_fields"
 
+REVIEW_REQUIRED_FIELDS: tuple[str, ...] = (
+    "first_name",
+    "last_name",
+    "entry_date",
+    "birth_year",
+)
+
 REQUIRED_FIELDS: tuple[str, ...] = (
     "first_name",
     "last_name",
@@ -310,10 +317,14 @@ def _find_possible_duplicate(
     return _select_best_duplicate(weak_name_only_rows, phone_value, email_value)
 
 
-def _validate_required_fields(data: dict[str, Any], errors: list[str]) -> None:
+def _validate_required_fields(
+    data: dict[str, Any],
+    errors: list[str],
+    required_fields: tuple[str, ...],
+) -> None:
     present_fields = _present_fields(data)
 
-    for field_name in REQUIRED_FIELDS:
+    for field_name in required_fields:
         field_value = data.get(field_name)
 
         if field_name not in present_fields:
@@ -682,25 +693,47 @@ def _build_intake_data(form: IntakeFormLike, shelter: str) -> dict[str, Any]:
     return data
 
 
-def _validate_intake_form(form: IntakeFormLike, shelter: str) -> tuple[dict[str, Any], list[str]]:
+def _validation_phase(form: IntakeFormLike, phase: str) -> str:
+    normalized_phase = (phase or "").strip().lower()
+    if normalized_phase in {"review", "final"}:
+        return normalized_phase
+
+    action = clean(form.get("action"))
+    return "review" if action == "review" else "final"
+
+
+def _validate_intake_form(
+    form: IntakeFormLike,
+    shelter: str,
+    phase: str = "auto",
+) -> tuple[dict[str, Any], list[str]]:
     normalized_selected_shelter = normalize_shelter_name(shelter)
     data = _build_intake_data(form, shelter)
 
     errors: list[str] = []
+    validation_phase = _validation_phase(form, phase)
+    is_review_phase = validation_phase == "review"
 
     _normalize_yes_no_fields(data)
-    _validate_required_fields(data, errors)
+
+    if is_review_phase:
+        _validate_required_fields(data, errors, REVIEW_REQUIRED_FIELDS)
+    else:
+        _validate_required_fields(data, errors, REQUIRED_FIELDS)
+
     _validate_shelter_scope(data, normalized_selected_shelter, errors)
     _validate_gender_and_disability(data, errors)
     _validate_birth_year(data, errors)
     _validate_date_fields(data, errors)
     _validate_phone_and_email(data, errors)
-    _validate_zipcode(data, errors)
-    _validate_scored_fields(data, errors)
-    _validate_income_fields(data, errors)
-    _validate_family_count_fields(data, errors)
-    _validate_conditional_fields(data, errors)
-    _apply_benefits_screening_need(data)
+
+    if not is_review_phase:
+        _validate_zipcode(data, errors)
+        _validate_scored_fields(data, errors)
+        _validate_income_fields(data, errors)
+        _validate_family_count_fields(data, errors)
+        _validate_conditional_fields(data, errors)
+        _apply_benefits_screening_need(data)
 
     data.pop(INTERNAL_PRESENT_FIELDS_KEY, None)
 
