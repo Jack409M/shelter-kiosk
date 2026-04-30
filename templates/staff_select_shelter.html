@@ -1,16 +1,211 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Select shelter</h1>
-<form method="post" class="card">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <label>Shelter</label>
-  <select name="shelter" required>
-    <option value="">Select</option>
+<style>
+  .shelter-select-shell {
+    max-width: 1120px;
+    margin: 24px auto 0;
+  }
+
+  .shelter-select-hero {
+    border: 1px solid #cfd9e3;
+    border-radius: 22px;
+    background: #f7fbff;
+    box-shadow: 0 14px 34px rgba(18, 38, 63, 0.10);
+    padding: 28px 30px;
+    margin-bottom: 22px;
+  }
+
+  .shelter-kicker {
+    color: #337ab7;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .shelter-select-hero h1 {
+    margin: 0;
+    color: #1f3550;
+    font-size: 34px;
+    line-height: 1.1;
+  }
+
+  .shelter-select-hero p {
+    margin: 12px 0 0;
+    color: #4f657b;
+    font-size: 15px;
+    line-height: 1.5;
+    max-width: 680px;
+  }
+
+  .signed-in-note {
+    margin-top: 16px;
+    display: inline-flex;
+    padding: 8px 12px;
+    border: 1px solid #d7e1ea;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #35516d;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .shelter-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .shelter-card-form {
+    margin: 0;
+  }
+
+  .shelter-card {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    text-align: left;
+    border: 1px solid #cfd9e3;
+    border-radius: 22px;
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 12px 26px rgba(18, 38, 63, 0.09);
+    cursor: pointer;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+  }
+
+  .shelter-card:hover,
+  .shelter-card:focus {
+    transform: translateY(-3px);
+    border-color: #337ab7;
+    box-shadow: 0 16px 34px rgba(18, 38, 63, 0.15);
+    outline: none;
+  }
+
+  .shelter-photo {
+    height: 168px;
+    background-size: cover;
+    background-position: center;
+  }
+
+  .photo-haven {
+    background-image:
+      linear-gradient(rgba(31, 53, 80, 0.10), rgba(31, 53, 80, 0.10)),
+      url("{{ url_for('static', filename='images/shelters/haven.webp') }}");
+    background-color: #d9e8f2;
+  }
+
+  .photo-gratitude {
+    background-image:
+      linear-gradient(rgba(31, 53, 80, 0.10), rgba(31, 53, 80, 0.10)),
+      url("{{ url_for('static', filename='images/shelters/gratitude.webp') }}");
+    background-color: #e2e7df;
+  }
+
+  .photo-abba {
+    background-image:
+      linear-gradient(rgba(31, 53, 80, 0.10), rgba(31, 53, 80, 0.10)),
+      url("{{ url_for('static', filename='images/shelters/abba.webp') }}");
+    background-color: #eadfce;
+  }
+
+  .shelter-card-body {
+    padding: 18px;
+  }
+
+  .shelter-card-body h2 {
+    margin: 0 0 8px;
+    color: #1f3550;
+    font-size: 22px;
+  }
+
+  .shelter-card-body p {
+    margin: 0;
+    color: #60758a;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .shelter-card-action {
+    margin-top: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: #f3f8fc;
+    color: #1f5f99;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  @media (max-width: 900px) {
+    .shelter-card-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="shelter-select-shell">
+  <section class="shelter-select-hero">
+    <div class="shelter-kicker">Downtown Women’s Center</div>
+    <h1>Choose your shelter</h1>
+    <p>
+      Select the working context for this session. Your choice determines which
+      residents, attendance tools, case management records, and operational pages
+      are shown.
+    </p>
+    <div class="signed-in-note">
+      Signed in as {{ session.get('username') }}{% if session.get('role') %} · {{ session.get('role')|replace('_', ' ')|title }}{% endif %}
+    </div>
+  </section>
+
+  <div class="shelter-card-grid">
     {% for s in shelters %}
-      <option value="{{ s }}">{{ s }}</option>
+      {% set shelter_key = (s or '')|lower %}
+      {% if 'haven' in shelter_key %}
+        <form method="post" class="shelter-card-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="shelter" value="{{ shelter_key }}">
+          <button type="submit" class="shelter-card">
+            <div class="shelter-photo photo-haven"></div>
+            <div class="shelter-card-body">
+              <h2>Haven House</h2>
+              <p>Emergency shelter and daily operations.</p>
+              <span class="shelter-card-action">Continue to Haven</span>
+            </div>
+          </button>
+        </form>
+      {% elif 'gratitude' in shelter_key %}
+        <form method="post" class="shelter-card-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="shelter" value="{{ shelter_key }}">
+          <button type="submit" class="shelter-card">
+            <div class="shelter-photo photo-gratitude"></div>
+            <div class="shelter-card-body">
+              <h2>Gratitude House</h2>
+              <p>Transitional housing and long term support.</p>
+              <span class="shelter-card-action">Continue to Gratitude</span>
+            </div>
+          </button>
+        </form>
+      {% elif 'abba' in shelter_key %}
+        <form method="post" class="shelter-card-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="shelter" value="{{ shelter_key }}">
+          <button type="submit" class="shelter-card">
+            <div class="shelter-photo photo-abba"></div>
+            <div class="shelter-card-body">
+              <h2>Abba House</h2>
+              <p>Structured program and recovery support.</p>
+              <span class="shelter-card-action">Continue to Abba</span>
+            </div>
+          </button>
+        </form>
+      {% endif %}
     {% endfor %}
-  </select>
-  <button type="submit">Continue</button>
-</form>
+  </div>
+</div>
 
 {% endblock %}
