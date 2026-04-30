@@ -199,6 +199,9 @@ def load_open_system_alerts(limit: int = 25) -> list[dict[str, Any]]:
             entity_type,
             entity_id,
             metadata,
+            acknowledged_by_user_id,
+            acknowledged_at,
+            acknowledgement_note,
             created_at,
             updated_at
         FROM system_alerts
@@ -233,6 +236,9 @@ def load_recent_system_alerts(limit: int = 50) -> list[dict[str, Any]]:
             entity_type,
             entity_id,
             metadata,
+            acknowledged_by_user_id,
+            acknowledged_at,
+            acknowledgement_note,
             resolved_by_user_id,
             resolved_at,
             resolution_note,
@@ -244,6 +250,64 @@ def load_recent_system_alerts(limit: int = 50) -> list[dict[str, Any]]:
         """,
         (safe_limit,),
     )
+
+
+def load_recent_system_alert_delivery_logs(limit: int = 50) -> list[dict[str, Any]]:
+    safe_limit = max(1, min(int(limit or 50), 100))
+    return db_fetchall(
+        """
+        SELECT
+            id,
+            alert_key,
+            alert_type,
+            severity,
+            title,
+            channel,
+            delivery_status,
+            message,
+            metadata,
+            created_at
+        FROM system_alert_delivery_logs
+        ORDER BY id DESC
+        LIMIT %s
+        """,
+        (safe_limit,),
+    )
+
+
+def acknowledge_system_alert(alert_id: int, *, acknowledgement_note: str = "") -> bool:
+    alert = db_fetchone(
+        "SELECT id, status, acknowledged_at FROM system_alerts WHERE id = %s LIMIT 1",
+        (alert_id,),
+    )
+    if not alert:
+        return False
+
+    if _normalize_status(alert.get("status")) == "resolved":
+        return True
+
+    if _normalize_text(alert.get("acknowledged_at")):
+        return True
+
+    now = utcnow_iso()
+    db_execute(
+        """
+        UPDATE system_alerts
+        SET acknowledged_by_user_id = %s,
+            acknowledged_at = %s,
+            acknowledgement_note = %s,
+            updated_at = %s
+        WHERE id = %s
+        """,
+        (
+            _current_staff_user_id(),
+            now,
+            _normalize_text(acknowledgement_note),
+            now,
+            alert_id,
+        ),
+    )
+    return True
 
 
 def resolve_system_alert(alert_id: int, *, resolution_note: str = "") -> bool:
