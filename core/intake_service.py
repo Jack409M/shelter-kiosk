@@ -128,6 +128,144 @@ def latest_intake_for_enrollment(enrollment_id: int):
     )
 
 
+def _normalized_shelter(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _require_present(data: dict[str, Any], field_name: str) -> Any:
+    value = data.get(field_name)
+    if value in (None, ""):
+        raise ValueError(f"Intake create contract failed: {field_name} is required.")
+    return value
+
+
+def _assert_intake_create_payload(data: dict[str, Any], current_shelter: str) -> None:
+    expected_shelter = _normalized_shelter(current_shelter)
+    if not expected_shelter:
+        raise ValueError("Intake create contract failed: current_shelter is required.")
+
+    required_fields = (
+        "first_name",
+        "last_name",
+        "entry_date",
+        "birth_year",
+        "program_status",
+        "emergency_contact_name",
+        "emergency_contact_relationship",
+        "emergency_contact_phone",
+        "prior_living",
+        "employment_status",
+    )
+
+    for field_name in required_fields:
+        _require_present(data, field_name)
+
+    if not isinstance(data.get("birth_year"), int):
+        raise ValueError("Intake create contract failed: birth_year must be an integer.")
+
+    income_at_entry = data.get("income_at_entry")
+    if income_at_entry is None:
+        raise ValueError("Intake create contract failed: income_at_entry is required.")
+
+    if not isinstance(income_at_entry, int | float):
+        raise ValueError("Intake create contract failed: income_at_entry must be numeric.")
+
+    phone = data.get("phone")
+    if phone not in (None, "") and str(phone) != "".join(ch for ch in str(phone) if ch.isdigit()):
+        raise ValueError("Intake create contract failed: phone must be normalized digits only.")
+
+    emergency_phone = data.get("emergency_contact_phone")
+    if emergency_phone not in (None, "") and str(emergency_phone) != "".join(
+        ch for ch in str(emergency_phone) if ch.isdigit()
+    ):
+        raise ValueError(
+            "Intake create contract failed: emergency_contact_phone must be normalized digits only."
+        )
+
+
+def _assert_created_intake_baseline(
+    *,
+    resident_id: int,
+    enrollment_id: int,
+    current_shelter: str,
+) -> None:
+    ph = placeholder()
+    expected_shelter = _normalized_shelter(current_shelter)
+
+    baseline = db_fetchone(
+        f"""
+        SELECT
+            r.id AS resident_id,
+            e.id AS enrollment_id,
+            e.resident_id AS enrollment_resident_id,
+            LOWER(COALESCE(r.shelter, '')) AS resident_shelter,
+            LOWER(COALESCE(e.shelter, '')) AS enrollment_shelter,
+            r.first_name,
+            r.last_name,
+            r.birth_year,
+            r.emergency_contact_name,
+            r.emergency_contact_relationship,
+            r.emergency_contact_phone,
+            e.entry_date,
+            e.program_status,
+            ia.id AS intake_assessment_id,
+            ia.place_staying_before_entry,
+            ia.employment_status_at_entry,
+            ia.income_at_entry,
+            fs.id AS family_snapshot_id
+        FROM residents r
+        JOIN program_enrollments e ON e.resident_id = r.id
+        JOIN intake_assessments ia ON ia.enrollment_id = e.id
+        JOIN family_snapshots fs ON fs.enrollment_id = e.id
+        WHERE r.id = {ph}
+          AND e.id = {ph}
+        LIMIT 1
+        """,
+        (resident_id, enrollment_id),
+    )
+
+    if not baseline:
+        raise RuntimeError(
+            "Intake create contract failed: resident, enrollment, intake assessment, "
+            "and family snapshot were not all created."
+        )
+
+    if int(baseline["resident_id"]) != int(resident_id):
+        raise RuntimeError("Intake create contract failed: resident id mismatch.")
+
+    if int(baseline["enrollment_id"]) != int(enrollment_id):
+        raise RuntimeError("Intake create contract failed: enrollment id mismatch.")
+
+    if int(baseline["enrollment_resident_id"]) != int(resident_id):
+        raise RuntimeError("Intake create contract failed: enrollment is linked to wrong resident.")
+
+    if baseline["resident_shelter"] != expected_shelter:
+        raise RuntimeError("Intake create contract failed: resident shelter mismatch.")
+
+    if baseline["enrollment_shelter"] != expected_shelter:
+        raise RuntimeError("Intake create contract failed: enrollment shelter mismatch.")
+
+    required_baseline_fields = (
+        "first_name",
+        "last_name",
+        "birth_year",
+        "emergency_contact_name",
+        "emergency_contact_relationship",
+        "emergency_contact_phone",
+        "entry_date",
+        "program_status",
+        "place_staying_before_entry",
+        "employment_status_at_entry",
+        "income_at_entry",
+    )
+
+    for field_name in required_baseline_fields:
+        if baseline.get(field_name) in (None, ""):
+            raise RuntimeError(
+                f"Intake create contract failed: persisted baseline missing {field_name}."
+            )
+
+
 def intake_edit_form_data(
     *,
     resident: dict[str, Any],
@@ -228,6 +366,8 @@ def create_intake(
     data: dict[str, Any],
     draft_id: int | None,
 ) -> IntakeCreateResult:
+    _assert_intake_create_payload(data, current_shelter)
+
     with db_transaction():
         new_resident_id, resident_identifier, resident_code = _insert_resident(
             data,
@@ -244,6 +384,11 @@ def create_intake(
         sync_enrollment_needs(
             enrollment_id,
             selected_need_keys=data.get("entry_need_keys", []),
+        )
+        _assert_created_intake_baseline(
+            resident_id=new_resident_id,
+            enrollment_id=enrollment_id,
+            current_shelter=current_shelter,
         )
 
         if draft_id is not None:
@@ -277,6 +422,8 @@ def create_intake_for_existing_resident(
     data: dict[str, Any],
     draft_id: int | None,
 ) -> int:
+    _assert_intake_create_payload(data, current_shelter)
+
     with db_transaction():
         enrollment_id = _insert_program_enrollment(
             existing_resident_id,
@@ -289,6 +436,11 @@ def create_intake_for_existing_resident(
         sync_enrollment_needs(
             enrollment_id,
             selected_need_keys=data.get("entry_need_keys", []),
+        )
+        _assert_created_intake_baseline(
+            resident_id=existing_resident_id,
+            enrollment_id=enrollment_id,
+            current_shelter=current_shelter,
         )
 
         if draft_id is not None:
