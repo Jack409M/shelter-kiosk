@@ -96,6 +96,9 @@ def ensure_system_alerts_table(kind: str) -> None:
             entity_type TEXT NOT NULL DEFAULT '',
             entity_id INTEGER,
             metadata TEXT NOT NULL DEFAULT '',
+            acknowledged_by_user_id INTEGER,
+            acknowledged_at TEXT,
+            acknowledgement_note TEXT,
             resolved_by_user_id INTEGER,
             resolved_at TEXT,
             resolution_note TEXT,
@@ -116,6 +119,9 @@ def ensure_system_alerts_table(kind: str) -> None:
             entity_type TEXT NOT NULL DEFAULT '',
             entity_id INTEGER,
             metadata TEXT NOT NULL DEFAULT '',
+            acknowledged_by_user_id INTEGER,
+            acknowledged_at TEXT,
+            acknowledgement_note TEXT,
             resolved_by_user_id INTEGER,
             resolved_at TEXT,
             resolution_note TEXT,
@@ -125,11 +131,50 @@ def ensure_system_alerts_table(kind: str) -> None:
         """,
     )
 
+    safe_add_column(kind, "system_alerts", "acknowledged_by_user_id INTEGER")
+    safe_add_column(kind, "system_alerts", "acknowledged_at TEXT")
+    safe_add_column(kind, "system_alerts", "acknowledgement_note TEXT")
+
+
+def ensure_system_alert_delivery_logs_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS system_alert_delivery_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            alert_key TEXT NOT NULL,
+            alert_type TEXT NOT NULL DEFAULT '',
+            severity TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            channel TEXT NOT NULL,
+            delivery_status TEXT NOT NULL,
+            message TEXT NOT NULL DEFAULT '',
+            metadata TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS system_alert_delivery_logs (
+            id SERIAL PRIMARY KEY,
+            alert_key TEXT NOT NULL,
+            alert_type TEXT NOT NULL DEFAULT '',
+            severity TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            channel TEXT NOT NULL,
+            delivery_status TEXT NOT NULL,
+            message TEXT NOT NULL DEFAULT '',
+            metadata TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """,
+    )
+
 
 def ensure_tables(kind: str) -> None:
     ensure_duplicate_name_reviews_table(kind)
     ensure_resident_merge_history_table(kind)
     ensure_system_alerts_table(kind)
+    ensure_system_alert_delivery_logs_table(kind)
 
 
 def ensure_indexes() -> None:
@@ -185,3 +230,33 @@ def ensure_indexes() -> None:
         )
     except Exception:
         current_app.logger.exception("Failed to create system alerts index.")
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS system_alerts_acknowledged_idx
+            ON system_alerts (acknowledged_at, status, severity)
+            """
+        )
+    except Exception:
+        current_app.logger.exception("Failed to create system alerts acknowledgement index.")
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS system_alert_delivery_logs_key_idx
+            ON system_alert_delivery_logs (alert_key, created_at)
+            """
+        )
+    except Exception:
+        current_app.logger.exception("Failed to create system alert delivery log key index.")
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS system_alert_delivery_logs_status_idx
+            ON system_alert_delivery_logs (delivery_status, channel, created_at)
+            """
+        )
+    except Exception:
+        current_app.logger.exception("Failed to create system alert delivery log status index.")
