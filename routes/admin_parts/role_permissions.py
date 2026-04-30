@@ -153,7 +153,7 @@ PERMISSION_DEFINITIONS = [
         "label": "Create or assign admin role",
         "description": "Can grant the admin role to another staff account.",
         "roles": {"admin"},
-        "source": "routes.admin_parts.helpers.allowed_roles_to_create",
+        "source": "core.admin_rbac.allowed_roles_to_create",
     },
     {
         "key": "system_health",
