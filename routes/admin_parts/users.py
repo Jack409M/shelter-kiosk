@@ -2,28 +2,19 @@ from __future__ import annotations
 
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 
+from core.admin_rbac import (
+    all_roles as _all_roles,
+    allowed_roles_to_create as _allowed_roles_to_create,
+    can_manage_target_role as _can_manage_target_role,
+    current_role as _current_role,
+    ordered_roles as _ordered_roles,
+    require_admin_or_shelter_director_role as _require_admin_or_shelter_director,
+    require_admin_role as _require_admin,
+)
 from core.audit import log_action
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt, utcnow_iso
 from core.runtime import MIN_STAFF_PASSWORD_LEN, ROLE_LABELS, init_db
-from routes.admin_parts.helpers import (
-    all_roles as _all_roles,
-)
-from routes.admin_parts.helpers import (
-    allowed_roles_to_create as _allowed_roles_to_create,
-)
-from routes.admin_parts.helpers import (
-    current_role as _current_role,
-)
-from routes.admin_parts.helpers import (
-    ordered_roles as _ordered_roles,
-)
-from routes.admin_parts.helpers import (
-    require_admin_or_shelter_director_role as _require_admin_or_shelter_director,
-)
-from routes.admin_parts.helpers import (
-    require_admin_role as _require_admin,
-)
 
 VALID_SHELTERS = {"abba", "haven", "gratitude"}
 VALID_CALENDAR_COLORS = {
@@ -111,18 +102,6 @@ def _save_staff_shelter_assignments(staff_user_id: int, shelters: list[str]) -> 
             """,
             (staff_user_id, shelter),
         )
-
-
-def _can_manage_target_role(target_role: str) -> bool:
-    role = _current_role()
-
-    if role == "admin":
-        return True
-
-    if role == "shelter_director":
-        return target_role in {"staff", "case_manager", "ra"}
-
-    return False
 
 
 def admin_users_view():
