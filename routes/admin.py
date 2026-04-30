@@ -35,6 +35,7 @@ from routes.admin_parts.pass_retention import (
 )
 from routes.admin_parts.role_permissions import role_permission_matrix_view
 from routes.admin_parts.sh_dashboard import (
+    acknowledge_system_health_alert_view,
     resolve_system_health_alert_view,
     system_health_dashboard_view,
     system_health_events_api,
@@ -47,9 +48,9 @@ from routes.admin_parts.sh_data_quality import (
 )
 from routes.admin_parts.system import (
     admin_demo_data_view,
+    admin_test_alert_view,
     clear_demo_data_view,
     seed_demo_data_view,
-    admin_test_alert_view,
 )
 from routes.admin_parts.users import (
     admin_add_user_view,
@@ -103,6 +104,13 @@ def admin_test_alert():
 @require_shelter
 def admin_backup_documentation():
     return admin_backup_documentation_view()
+
+
+@admin.post("/staff/admin/system-health/alerts/<int:alert_id>/acknowledge")
+@require_login
+@require_shelter
+def admin_acknowledge_system_alert(alert_id: int):
+    return acknowledge_system_health_alert_view(alert_id)
 
 
 @admin.post("/staff/admin/system-health/alerts/<int:alert_id>/resolve")
