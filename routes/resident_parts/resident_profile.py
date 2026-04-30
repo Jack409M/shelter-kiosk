@@ -1,7 +1,8 @@
-from flask import flash, redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, url_for, session
 
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
+from core.field_change_logger import log_field_change
 from routes.case_management_parts.helpers import placeholder
 
 
@@ -22,6 +23,9 @@ def edit_resident_profile_view(resident_id: int):
         return redirect(url_for("residents.staff_residents"))
 
     if request.method == "POST":
+        old_phone = resident.get("phone")
+        old_birth_year = resident.get("birth_year")
+
         phone = (request.form.get("phone") or "").strip()
         birth_year = request.form.get("birth_year")
 
@@ -35,6 +39,37 @@ def edit_resident_profile_view(resident_id: int):
             """,
             (phone, birth_year or None, utcnow_iso(), resident_id),
         )
+
+        staff_user_id = session.get("staff_user_id")
+        shelter = resident.get("shelter")
+
+        try:
+            log_field_change(
+                entity_type="resident",
+                entity_id=resident_id,
+                table_name="residents",
+                field_name="phone",
+                old_value=old_phone,
+                new_value=phone,
+                changed_by_user_id=staff_user_id,
+                shelter=shelter,
+                change_reason="profile_edit",
+            )
+
+            log_field_change(
+                entity_type="resident",
+                entity_id=resident_id,
+                table_name="residents",
+                field_name="birth_year",
+                old_value=old_birth_year,
+                new_value=birth_year,
+                changed_by_user_id=staff_user_id,
+                shelter=shelter,
+                change_reason="profile_edit",
+            )
+        except Exception:
+            # Do not block user flow if audit logging fails
+            pass
 
         flash("Resident profile updated.", "ok")
         return redirect(url_for("residents.edit_resident_profile", resident_id=resident_id))
