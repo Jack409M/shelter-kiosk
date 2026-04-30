@@ -24,6 +24,23 @@
   </p>
 </div>
 
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Administrative Review</h2>
+  <p class="card-subtitle">
+    Review role permissions, security configuration changes, live route exposure, and alert delivery from the current running application.
+  </p>
+  <p>
+    <a href="{{ url_for('admin.admin_role_permissions') }}">Open Role Permission Matrix</a>
+  </p>
+  <p>
+    <a href="{{ url_for('admin.admin_security_config_history') }}">Open Security Configuration History</a>
+  </p>
+  <form method="POST" action="{{ url_for('admin.admin_test_alert') }}" style="margin-top:12px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Send Test Alert</button>
+  </form>
+</div>
+
 {% if alerts %}
 <div class="card" style="margin-bottom:16px;">
   <h2 class="card-title-large">Active Alerts</h2>
@@ -36,8 +53,7 @@
           <th>Title</th>
           <th>Message</th>
           <th>Created</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -48,20 +64,7 @@
           <td>{{ alert.message }}</td>
           <td>{{ alert.created_at }}</td>
           <td>
-            {% if alert.acknowledged_at %}
-              Acknowledged
-            {% else %}
-              New
-            {% endif %}
-          </td>
-          <td>
-            {% if not alert.acknowledged_at %}
-            <form method="POST" action="/staff/admin/system-health/alerts/{{ alert.id }}/acknowledge" style="display:inline;">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Acknowledge</button>
-            </form>
-            {% endif %}
-            <form method="POST" action="/staff/admin/system-health/alerts/{{ alert.id }}/resolve" style="display:inline;">
+            <form method="POST" action="/staff/admin/system-health/alerts/{{ alert.id }}/resolve">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Resolve</button>
             </form>
@@ -74,32 +77,133 @@
 </div>
 {% endif %}
 
-{% if delivery_logs %}
 <div class="card" style="margin-bottom:16px;">
-  <h2 class="card-title-large">Alert Delivery History</h2>
+  <h2 class="card-title-large">System Checks</h2>
+  <p class="card-subtitle">
+    Core runtime checks for database, scheduler, SMS, backups, version, and job events.
+  </p>
+
   <div class="table-shell">
     <table class="app-table">
       <thead>
         <tr>
-          <th>Time</th>
-          <th>Channel</th>
           <th>Status</th>
-          <th>Title</th>
+          <th>Component</th>
+          <th>Detail</th>
+          <th>Meta</th>
         </tr>
       </thead>
       <tbody>
-        {% for log in delivery_logs %}
-        <tr>
-          <td>{{ log.created_at }}</td>
-          <td>{{ log.channel }}</td>
-          <td>{{ log.delivery_status }}</td>
-          <td>{{ log.title }}</td>
-        </tr>
+        {% for card in runtime_cards %}
+          <tr>
+            <td>
+              {% if card.state == "ok" %}
+                <strong>OK</strong>
+              {% elif card.state == "warn" %}
+                <strong>Warning</strong>
+              {% else %}
+                <strong>Error</strong>
+              {% endif %}
+            </td>
+            <td>{{ card.label }}</td>
+            <td>
+              {{ card.detail }}
+              {% if card.label == "Last Successful Event" %}
+                <div><button onclick="openShModal('success')">View recent events</button></div>
+              {% elif card.label == "Last Error" %}
+                <div><button onclick="openShModal('error')">View recent errors</button></div>
+              {% endif %}
+            </td>
+            <td>{{ card.meta }}</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
-{% endif %}
+
+<div class="card">
+  <h2 class="card-title-large">Enterprise Readiness</h2>
+  <p class="card-subtitle">
+    Visibility into alerting, role security, identity providers, disaster recovery, analytics, and compliance readiness.
+  </p>
+
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Control</th>
+          <th>Detail</th>
+          <th>Owner</th>
+          <th>Next Step</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in enterprise_cards %}
+          <tr>
+            <td>
+              {% if card.state == "ok" %}
+                <strong>OK</strong>
+              {% elif card.state == "warn" %}
+                <strong>Warning</strong>
+              {% else %}
+                <strong>Error</strong>
+              {% endif %}
+            </td>
+            <td>{{ card.label }}</td>
+            <td>{{ card.detail }}</td>
+            <td>{{ card.owner }}</td>
+            <td>{{ card.next_step }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="sh-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000;">
+  <div style="background:#fff; margin:5% auto; padding:20px; max-width:800px; border-radius:12px;">
+    <h2 id="sh-modal-title">System Events</h2>
+    <div id="sh-modal-body" style="max-height:400px; overflow:auto;">Loading...</div>
+    <div style="margin-top:16px;"><button onclick="closeShModal()">Close</button></div>
+  </div>
+</div>
+
+<script>
+async function openShModal(type) {
+  const modal = document.getElementById('sh-modal');
+  const body = document.getElementById('sh-modal-body');
+  const title = document.getElementById('sh-modal-title');
+
+  modal.style.display = 'block';
+  body.innerHTML = 'Loading...';
+
+  title.innerText = type === 'error' ? 'Recent Errors' : 'Recent Events';
+
+  try {
+    const res = await fetch(`/staff/admin/system-health/events?status=${type}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      body.innerHTML = '<p>No events found.</p>';
+      return;
+    }
+
+    body.innerHTML = data.map(e => `
+      <div style="border-bottom:1px solid #eee; padding:8px 0;">
+        <strong>${e.message}</strong><br>
+        <small>${e.created_at}</small>
+      </div>
+    `).join('');
+  } catch (err) {
+    body.innerHTML = '<p>Failed to load events.</p>';
+  }
+}
+
+function closeShModal() {
+  document.getElementById('sh-modal').style.display = 'none';
+}
+</script>
 
 {% endblock %}
