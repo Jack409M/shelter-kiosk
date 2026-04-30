@@ -3,7 +3,11 @@ from __future__ import annotations
 import ipaddress
 from collections import Counter
 
+from flask import g
+
+from core.db import db_fetchall
 from core.geoip import lookup_ip
+from core.rate_limit import get_locked_keys_snapshot
 
 THREAT_EVENT_SCORES = {
     "login_failed": 2,
@@ -247,3 +251,86 @@ def build_attack_map_points(top_attacking_ips: list[dict]) -> list[dict]:
         )
 
     return points
+
+
+def build_locked_username_snapshot():
+    rows = []
+
+    for row in get_locked_keys_snapshot():
+        key = str(row.get("key", ""))
+        prefix = "staff_login_username_lock:"
+
+        if not key.startswith(prefix):
+            continue
+
+        rows.append(
+            {
+                "username": key[len(prefix) :],
+                "seconds_remaining": row.get("seconds_remaining", 0),
+                "key": key,
+            }
+        )
+
+    rows.sort(key=lambda item: int(item["seconds_remaining"]), reverse=True)
+    return rows
+
+
+def build_recent_staff_sessions(limit: int = 12) -> list[dict]:
+    kind = g.get("db_kind")
+    query_limit = max(int(limit or 12) * 20, 100)
+
+    rows = db_fetchall(
+        """
+        SELECT
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        WHERE a.action_type IN ('login', 'logout', 'profile_update', 'reset_password', 'set_role', 'set_active')
+          AND NULLIF(a.created_at, '')::timestamptz >= NOW() - INTERVAL '12 hours'
+        ORDER BY a.id DESC
+        LIMIT %s
+        """
+        if kind == "pg"
+        else """
+        SELECT
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        WHERE a.action_type IN ('login', 'logout', 'profile_update', 'reset_password', 'set_role', 'set_active')
+          AND a.created_at >= datetime('now', '-12 hours')
+        ORDER BY a.id DESC
+        LIMIT ?
+        """,
+        (query_limit,),
+    )
+
+    sessions = {}
+
+    for row in rows or []:
+        username = (row_value(row, "staff_username", "") or "").strip()
+        if not username:
+            details = row_value(row, "action_details", "") or ""
+            username = extract_detail_value(details, "username")
+
+        if not username or username in sessions:
+            continue
+
+        action_type = (row_value(row, "action_type", "") or "").strip()
+        created_at = row_value(row, "created_at", "") or ""
+
+        sessions[username] = {
+            "username": username,
+            "status": "active" if action_type == "login" else "ended",
+            "last_seen": created_at,
+            "last_action": action_type,
+        }
+
+    active_rows = [row for row in sessions.values() if row["status"] == "active"]
+    active_rows.sort(key=lambda item: str(item.get("last_seen", "")), reverse=True)
+    return active_rows[:limit]
