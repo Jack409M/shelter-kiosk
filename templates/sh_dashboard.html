@@ -53,6 +53,7 @@
           <th>Title</th>
           <th>Message</th>
           <th>Created</th>
+          <th>Status</th>
           <th>Action</th>
         </tr>
       </thead>
@@ -64,11 +65,61 @@
           <td>{{ alert.message }}</td>
           <td>{{ alert.created_at }}</td>
           <td>
-            <form method="POST" action="/staff/admin/system-health/alerts/{{ alert.id }}/resolve">
+            {% if alert.acknowledged_at %}
+              Acknowledged<br>
+              <small>{{ alert.acknowledged_at }}</small>
+            {% else %}
+              New
+            {% endif %}
+          </td>
+          <td>
+            {% if not alert.acknowledged_at %}
+            <form method="POST" action="/staff/admin/system-health/alerts/{{ alert.id }}/acknowledge" style="display:inline-block; margin-right:6px;">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Acknowledge</button>
+            </form>
+            {% endif %}
+            <form method="POST" action="/staff/admin/system-health/alerts/{{ alert.id }}/resolve" style="display:inline-block;">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Resolve</button>
             </form>
           </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if delivery_logs %}
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Alert Delivery History</h2>
+  <p class="card-subtitle">
+    Recent email, SMS, webhook, and skipped delivery attempts for system alerts.
+  </p>
+
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Channel</th>
+          <th>Status</th>
+          <th>Severity</th>
+          <th>Title</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in delivery_logs %}
+        <tr>
+          <td>{{ log.created_at }}</td>
+          <td>{{ log.channel }}</td>
+          <td>{{ log.delivery_status }}</td>
+          <td>{{ log.severity|upper }}</td>
+          <td>{{ log.title }}</td>
+          <td>{{ log.message }}</td>
         </tr>
         {% endfor %}
       </tbody>
