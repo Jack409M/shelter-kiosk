@@ -1,46 +1,323 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Staff login</h1>
+<style>
+  .signin-shell {
+    max-width: 1080px;
+    margin: 30px auto 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+    gap: 24px;
+    align-items: stretch;
+  }
 
-<div class="card" style="margin-bottom:16px;">
-  <a href="{{ url_for('microsoft_auth.microsoft_login') }}">Sign in with Microsoft</a>
+  .signin-hero,
+  .signin-panel {
+    border: 1px solid #cfd9e3;
+    border-radius: 24px;
+    background: #f7fbff;
+    box-shadow: 0 16px 38px rgba(18, 38, 63, 0.12);
+  }
+
+  .signin-hero {
+    padding: 36px;
+    min-height: 440px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .signin-hero::before {
+    content: "";
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    right: -110px;
+    top: -120px;
+    border-radius: 999px;
+    background: rgba(51, 122, 183, 0.13);
+  }
+
+  .signin-hero::after {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    right: 80px;
+    bottom: -110px;
+    border-radius: 999px;
+    background: rgba(32, 178, 170, 0.10);
+  }
+
+  .signin-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .signin-kicker {
+    color: #337ab7;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .signin-hero h1 {
+    margin: 0;
+    color: #1f3550;
+    font-size: 42px;
+    line-height: 1.06;
+    max-width: 640px;
+  }
+
+  .signin-hero p {
+    margin: 18px 0 0;
+    color: #4f657b;
+    font-size: 16px;
+    line-height: 1.55;
+    max-width: 650px;
+  }
+
+  .signin-badges {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+
+  .signin-badge {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #d7e1ea;
+    color: #35516d;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .signin-footnote {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    color: #60758a;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .signin-panel {
+    padding: 24px;
+  }
+
+  .enterprise-card {
+    border: 1px solid #b8cfe3;
+    border-radius: 20px;
+    background: #ffffff;
+    padding: 24px;
+    margin-bottom: 18px;
+  }
+
+  .enterprise-card h2 {
+    margin: 0 0 8px;
+    color: #1f3550;
+    font-size: 24px;
+  }
+
+  .enterprise-card p {
+    margin: 0 0 18px;
+    color: #60758a;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .microsoft-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    border-radius: 13px;
+    border: 1px solid #1f5f99;
+    background: #337ab7;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 15px;
+    text-decoration: none;
+  }
+
+  .microsoft-button:hover {
+    background: #286aa3;
+    color: #ffffff;
+  }
+
+  .microsoft-mark {
+    display: inline-grid;
+    grid-template-columns: 8px 8px;
+    grid-template-rows: 8px 8px;
+    gap: 2px;
+  }
+
+  .microsoft-mark span {
+    width: 8px;
+    height: 8px;
+    display: block;
+    background: #ffffff;
+  }
+
+  .security-line {
+    margin-top: 12px;
+    color: #60758a;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .fallback-title {
+    margin: 18px 0 10px;
+    color: #35516d;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .fallback-form {
+    border: 1px solid #d7e1ea;
+    border-radius: 20px;
+    background: #ffffff;
+    padding: 18px;
+  }
+
+  .fallback-form label {
+    display: block;
+    margin-top: 12px;
+    color: #35516d;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .fallback-form input,
+  .fallback-form select {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+
+  .fallback-form button {
+    margin-top: 16px;
+    width: 100%;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-weight: 800;
+  }
+
+  .fallback-note {
+    margin: 10px 0 0;
+    color: #60758a;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 880px) {
+    .signin-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .signin-hero {
+      min-height: auto;
+    }
+
+    .signin-hero h1 {
+      font-size: 34px;
+    }
+  }
+</style>
+
+<div class="signin-shell">
+  <section class="signin-hero">
+    <div class="signin-content">
+      <div class="signin-kicker">Downtown Women’s Center</div>
+      <h1>Operations Platform</h1>
+      <p>
+        Secure staff access for shelter operations, case management, resident
+        records, reporting, attendance, housing accountability, and administrative tools.
+      </p>
+      <div class="signin-badges">
+        <span class="signin-badge">Microsoft Enterprise Login</span>
+        <span class="signin-badge">Role Based Access</span>
+        <span class="signin-badge">Audit Ready</span>
+      </div>
+    </div>
+
+    <p class="signin-footnote">
+      Authorized staff only. Access is tied to your staff account, assigned role,
+      and permitted shelter access.
+    </p>
+  </section>
+
+  <section class="signin-panel">
+    <div class="enterprise-card">
+      <h2>Staff Sign In</h2>
+      <p>
+        Use your DWC Microsoft account to access the operations platform.
+      </p>
+      <a class="microsoft-button" href="{{ url_for('microsoft_auth.microsoft_login') }}">
+        <span class="microsoft-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        Continue with Microsoft
+      </a>
+      <div class="security-line">Secured with Microsoft Entra ID</div>
+    </div>
+
+    <div class="fallback-title">Backup Staff Login</div>
+    <form method="post" class="fallback-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <label for="shelter">Shelter</label>
+      <select name="shelter" id="shelter" required>
+        <option value="">Select…</option>
+        {% for s in all_shelters %}
+          {% set shelter_value = (s or "")|lower %}
+          <option value="{{ shelter_value }}" {% if (request.form.get("shelter", "")|lower) == shelter_value %}selected{% endif %}>
+            {{ s }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="username">Username</label>
+      <input
+        id="username"
+        name="username"
+        type="text"
+        value="{{ request.form.get('username', '') }}"
+        autocomplete="username"
+        required
+      >
+
+      <label for="password">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        required
+      >
+
+      <button type="submit">Use Backup Login</button>
+      <p class="fallback-note">
+        Backup login is for authorized fallback access when Microsoft sign in is unavailable.
+      </p>
+    </form>
+  </section>
 </div>
-
-<form method="post" class="card">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-  <label for="shelter">Shelter</label>
-  <select name="shelter" id="shelter" required>
-    <option value="">Select…</option>
-    {% for s in all_shelters %}
-      {% set shelter_value = (s or "")|lower %}
-      <option value="{{ shelter_value }}" {% if (request.form.get("shelter", "")|lower) == shelter_value %}selected{% endif %}>
-        {{ s }}
-      </option>
-    {% endfor %}
-  </select>
-
-  <label for="username">Username</label>
-  <input
-    id="username"
-    name="username"
-    type="text"
-    value="{{ request.form.get('username', '') }}"
-    autocomplete="username"
-    autofocus
-    required
-  >
-
-  <label for="password">Password</label>
-  <input
-    id="password"
-    name="password"
-    type="password"
-    autocomplete="current-password"
-    required
-  >
-
-  <button type="submit">Login</button>
-</form>
 
 {% endblock %}
