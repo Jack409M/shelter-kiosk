@@ -41,6 +41,12 @@ def _request_form_data() -> dict[str, Any]:
     return request.form.to_dict(flat=True)
 
 
+def _blank_none_values(form_data: dict[str, Any] | None) -> dict[str, Any]:
+    if not form_data:
+        return {}
+    return {key: ("" if value is None else value) for key, value in form_data.items()}
+
+
 def _render_intake_form(
     *,
     current_shelter: str,
@@ -86,7 +92,7 @@ def _intake_template_context(
 ) -> dict[str, Any]:
     return {
         "current_shelter": current_shelter,
-        "form_data": form_data or {},
+        "form_data": _blank_none_values(form_data),
         "review_passed": review_passed,
         "is_edit_mode": is_edit_mode,
         "resident_id": resident_id,
