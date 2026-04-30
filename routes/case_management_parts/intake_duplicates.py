@@ -4,7 +4,6 @@ from typing import Any
 
 from flask import flash, redirect, render_template, session, url_for
 
-from core.intake_service import create_intake, create_intake_for_existing_resident
 from core.runtime import init_db
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
@@ -12,7 +11,11 @@ from routes.case_management_parts.helpers import (
     normalize_shelter_name,
     parse_int,
 )
-from routes.case_management_parts.intake_drafts import _dismiss_intake_draft, _load_intake_draft
+from routes.case_management_parts.intake_drafts import (
+    _dismiss_intake_draft,
+    _load_intake_draft,
+    _save_intake_draft,
+)
 from routes.case_management_parts.intake_validation import _find_possible_duplicate
 
 
@@ -47,6 +50,25 @@ def _fetch_existing_enrollment_for_resident(resident_id: int, shelter: str):
             program_status,
             shelter
         """,
+    )
+
+
+def _return_duplicate_draft_to_full_intake(
+    *,
+    current_shelter: str,
+    draft_id: int,
+    pending_form_data: dict[str, Any],
+) -> int:
+    full_intake_data = dict(pending_form_data)
+    full_intake_data["review_passed"] = "1"
+    full_intake_data.pop("draft_status", None)
+    full_intake_data.pop("draft_id", None)
+
+    return _save_intake_draft(
+        current_shelter=current_shelter,
+        form=full_intake_data,
+        draft_id=draft_id,
+        status="draft",
     )
 
 
@@ -121,18 +143,17 @@ def duplicate_review_use_existing_view(draft_id: int):
         )
         return redirect(url_for("case_management.resident_case", resident_id=existing_resident_id))
 
-    create_intake_for_existing_resident(
+    saved_draft_id = _return_duplicate_draft_to_full_intake(
         current_shelter=current_shelter,
-        existing_resident_id=existing_resident_id,
-        data=pending_form_data,
         draft_id=draft_id,
+        pending_form_data=pending_form_data,
     )
 
     flash(
-        "Returning resident matched. Existing resident record kept and a new enrollment was started.",
+        "Duplicate review passed. Complete the full intake before starting a new enrollment for the existing resident.",
         "success",
     )
-    return redirect(url_for("case_management.resident_case", resident_id=existing_resident_id))
+    return redirect(url_for("case_management.intake_form", draft_id=saved_draft_id))
 
 
 def duplicate_review_create_new_view(draft_id: int):
@@ -149,17 +170,17 @@ def duplicate_review_create_new_view(draft_id: int):
         flash("Pending intake review not found.", "error")
         return redirect(url_for("case_management.intake_index"))
 
-    create_result = create_intake(
+    saved_draft_id = _return_duplicate_draft_to_full_intake(
         current_shelter=current_shelter,
-        data=pending_form_data,
         draft_id=draft_id,
+        pending_form_data=pending_form_data,
     )
 
     flash(
-        f"New resident created successfully after duplicate review. Resident ID: {create_result.resident_identifier}. Resident Code: {create_result.resident_code}",
+        "Duplicate review passed. Complete the full intake before creating the new resident.",
         "success",
     )
-    return redirect(url_for("case_management.resident_case", resident_id=create_result.resident_id))
+    return redirect(url_for("case_management.intake_form", draft_id=saved_draft_id))
 
 
 def duplicate_review_dismiss_view(draft_id: int):
