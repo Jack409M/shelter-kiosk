@@ -14,15 +14,13 @@ from flask import (
 )
 
 from core import rate_limit as rate_limit_store
+from core.admin_dashboard_payload import build_admin_dashboard_payload as _build_admin_dashboard_payload
 from core.admin_rbac import current_role as _current_role
 from core.admin_rbac import require_admin_role as _require_admin
 from core.audit import log_action
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_dt, utcnow_iso
 from core.rate_limit import ban_ip
-from routes.admin_parts.helpers import (
-    build_admin_dashboard_payload as _build_admin_dashboard_payload,
-)
 
 AUTO_RESET_HOURS = 8
 MANUAL_IP_BAN_SECONDS = 3600
