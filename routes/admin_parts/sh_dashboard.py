@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 
+from core.admin_rbac import require_admin_role
 from core.db import db_fetchone
 from core.enterprise_readiness import (
     build_enterprise_readiness_cards,
@@ -21,7 +22,6 @@ from core.system_alerts import (
     resolve_system_alert,
     sync_system_health_alerts,
 )
-from routes.admin_parts.helpers import require_admin_role
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 PASS_CLEANUP_STALE_THRESHOLD = timedelta(hours=24)
