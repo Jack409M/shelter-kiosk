@@ -132,17 +132,20 @@ def _normalized_shelter(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
-def _require_present(data: dict[str, Any], field_name: str) -> Any:
+def _require_present(data: dict[str, Any], field_name: str, contract_name: str) -> Any:
     value = data.get(field_name)
     if value in (None, ""):
-        raise ValueError(f"Intake create contract failed: {field_name} is required.")
+        raise ValueError(f"{contract_name} failed: {field_name} is required.")
     return value
 
 
-def _assert_intake_create_payload(data: dict[str, Any], current_shelter: str) -> None:
-    expected_shelter = _normalized_shelter(current_shelter)
-    if not expected_shelter:
-        raise ValueError("Intake create contract failed: current_shelter is required.")
+def _assert_intake_payload_contract(
+    data: dict[str, Any],
+    expected_shelter: str,
+    contract_name: str,
+) -> None:
+    if not _normalized_shelter(expected_shelter):
+        raise ValueError(f"{contract_name} failed: shelter is required.")
 
     required_fields = (
         "first_name",
@@ -158,39 +161,54 @@ def _assert_intake_create_payload(data: dict[str, Any], current_shelter: str) ->
     )
 
     for field_name in required_fields:
-        _require_present(data, field_name)
+        _require_present(data, field_name, contract_name)
 
     if not isinstance(data.get("birth_year"), int):
-        raise ValueError("Intake create contract failed: birth_year must be an integer.")
+        raise ValueError(f"{contract_name} failed: birth_year must be an integer.")
 
     income_at_entry = data.get("income_at_entry")
     if income_at_entry is None:
-        raise ValueError("Intake create contract failed: income_at_entry is required.")
+        raise ValueError(f"{contract_name} failed: income_at_entry is required.")
 
     if not isinstance(income_at_entry, int | float):
-        raise ValueError("Intake create contract failed: income_at_entry must be numeric.")
+        raise ValueError(f"{contract_name} failed: income_at_entry must be numeric.")
 
-    phone = data.get("phone")
-    if phone not in (None, "") and str(phone) != "".join(ch for ch in str(phone) if ch.isdigit()):
-        raise ValueError("Intake create contract failed: phone must be normalized digits only.")
-
-    emergency_phone = data.get("emergency_contact_phone")
-    if emergency_phone not in (None, "") and str(emergency_phone) != "".join(
-        ch for ch in str(emergency_phone) if ch.isdigit()
-    ):
-        raise ValueError(
-            "Intake create contract failed: emergency_contact_phone must be normalized digits only."
-        )
+    for field_name in ("phone", "emergency_contact_phone"):
+        value = data.get(field_name)
+        if value not in (None, "") and str(value) != "".join(
+            ch for ch in str(value) if ch.isdigit()
+        ):
+            raise ValueError(f"{contract_name} failed: {field_name} must be normalized digits only.")
 
 
-def _assert_created_intake_baseline(
+def _assert_intake_create_payload(data: dict[str, Any], current_shelter: str) -> None:
+    _assert_intake_payload_contract(
+        data=data,
+        expected_shelter=current_shelter,
+        contract_name="Intake create contract",
+    )
+
+
+def _assert_intake_update_payload(
+    data: dict[str, Any],
+    enrollment_shelter: str | None,
+) -> None:
+    _assert_intake_payload_contract(
+        data=data,
+        expected_shelter=enrollment_shelter or "",
+        contract_name="Intake update contract",
+    )
+
+
+def _assert_intake_baseline(
     *,
     resident_id: int,
     enrollment_id: int,
-    current_shelter: str,
+    expected_shelter: str | None,
+    contract_name: str,
 ) -> None:
     ph = placeholder()
-    expected_shelter = _normalized_shelter(current_shelter)
+    normalized_expected_shelter = _normalized_shelter(expected_shelter)
 
     baseline = db_fetchone(
         f"""
@@ -226,24 +244,25 @@ def _assert_created_intake_baseline(
 
     if not baseline:
         raise RuntimeError(
-            "Intake create contract failed: resident, enrollment, intake assessment, "
-            "and family snapshot were not all created."
+            f"{contract_name} failed: resident, enrollment, intake assessment, "
+            "and family snapshot were not all present."
         )
 
     if int(baseline["resident_id"]) != int(resident_id):
-        raise RuntimeError("Intake create contract failed: resident id mismatch.")
+        raise RuntimeError(f"{contract_name} failed: resident id mismatch.")
 
     if int(baseline["enrollment_id"]) != int(enrollment_id):
-        raise RuntimeError("Intake create contract failed: enrollment id mismatch.")
+        raise RuntimeError(f"{contract_name} failed: enrollment id mismatch.")
 
     if int(baseline["enrollment_resident_id"]) != int(resident_id):
-        raise RuntimeError("Intake create contract failed: enrollment is linked to wrong resident.")
+        raise RuntimeError(f"{contract_name} failed: enrollment is linked to wrong resident.")
 
-    if baseline["resident_shelter"] != expected_shelter:
-        raise RuntimeError("Intake create contract failed: resident shelter mismatch.")
+    if normalized_expected_shelter:
+        if baseline["resident_shelter"] != normalized_expected_shelter:
+            raise RuntimeError(f"{contract_name} failed: resident shelter mismatch.")
 
-    if baseline["enrollment_shelter"] != expected_shelter:
-        raise RuntimeError("Intake create contract failed: enrollment shelter mismatch.")
+        if baseline["enrollment_shelter"] != normalized_expected_shelter:
+            raise RuntimeError(f"{contract_name} failed: enrollment shelter mismatch.")
 
     required_baseline_fields = (
         "first_name",
@@ -262,8 +281,36 @@ def _assert_created_intake_baseline(
     for field_name in required_baseline_fields:
         if baseline.get(field_name) in (None, ""):
             raise RuntimeError(
-                f"Intake create contract failed: persisted baseline missing {field_name}."
+                f"{contract_name} failed: persisted baseline missing {field_name}."
             )
+
+
+def _assert_created_intake_baseline(
+    *,
+    resident_id: int,
+    enrollment_id: int,
+    current_shelter: str,
+) -> None:
+    _assert_intake_baseline(
+        resident_id=resident_id,
+        enrollment_id=enrollment_id,
+        expected_shelter=current_shelter,
+        contract_name="Intake create contract",
+    )
+
+
+def _assert_updated_intake_baseline(
+    *,
+    resident_id: int,
+    enrollment_id: int,
+    enrollment_shelter: str | None,
+) -> None:
+    _assert_intake_baseline(
+        resident_id=resident_id,
+        enrollment_id=enrollment_id,
+        expected_shelter=enrollment_shelter,
+        contract_name="Intake update contract",
+    )
 
 
 def intake_edit_form_data(
@@ -468,7 +515,6 @@ def update_intake(
     enrollment_id: int,
     data: dict[str, Any],
 ) -> IntakeUpdateResult:
-    # Enforce integrity BEFORE reading or writing
     enrollment_row = assert_enrollment_belongs_to_resident(
         enrollment_id=enrollment_id,
         resident_id=resident_id,
@@ -477,6 +523,9 @@ def update_intake(
     existing_intake = latest_intake_for_enrollment(enrollment_id)
     if not existing_intake:
         raise LookupError("No intake assessment found for update.")
+
+    enrollment_shelter = enrollment_row.get("shelter") if isinstance(enrollment_row, dict) else None
+    _assert_intake_update_payload(data, enrollment_shelter)
 
     intake_assessment_id = int(existing_intake["id"])
     now = datetime.now(UTC).replace(tzinfo=None).isoformat()
@@ -686,7 +735,12 @@ def update_intake(
             selected_need_keys=data.get("entry_need_keys", []),
         )
 
-    enrollment_shelter = enrollment_row.get("shelter") if isinstance(enrollment_row, dict) else None
+        _assert_updated_intake_baseline(
+            resident_id=resident_id,
+            enrollment_id=enrollment_id,
+            enrollment_shelter=enrollment_shelter,
+        )
+
     log_action(
         "intake",
         enrollment_id,
