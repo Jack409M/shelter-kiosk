@@ -5,11 +5,11 @@ from typing import Any
 from flask import abort, current_app, flash, redirect, render_template, request, session, url_for
 from werkzeug.wrappers import Response
 
+from core.admin_rbac import require_admin_role as _require_admin
 from core.audit import log_action
 from core.demo_seed import clear_demo_seed, get_demo_seed_counts, run_demo_seed
 from core.runtime import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 from core.system_alerts import create_system_alert
-from routes.admin_parts.helpers import require_admin_role as _require_admin
 
 
 def _confirm_phrase_valid(expected: str) -> bool:
