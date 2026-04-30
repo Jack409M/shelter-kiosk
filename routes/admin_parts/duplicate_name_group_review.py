@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from flask import flash, redirect, render_template, request, url_for
 
+from core.admin_rbac import require_admin_role
 from routes.admin_parts.duplicate_merge_review import _resident_summary_rows
-from routes.admin_parts.helpers import require_admin_role
 
 
 def duplicate_name_group_review_view():
