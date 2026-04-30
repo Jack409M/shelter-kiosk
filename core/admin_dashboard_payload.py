@@ -4,14 +4,16 @@ from flask import current_app
 
 from core.db import db_fetchall
 from core.rate_limit import get_banned_ips_snapshot, get_rate_limit_snapshot
-from core.security_settings import load_security_settings
-from routes.admin_parts.helpers import (
+from core.security_intelligence import (
     build_attack_intelligence,
     build_attack_map_points,
+    build_threat_scores,
+)
+from core.security_settings import load_security_settings
+from routes.admin_parts.helpers import (
     build_locked_username_snapshot,
     build_recent_staff_sessions,
     build_security_banner,
-    build_threat_scores,
     maybe_create_security_incidents,
     maybe_send_security_alerts,
     load_recent_security_incidents,
