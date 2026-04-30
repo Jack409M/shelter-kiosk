@@ -6,10 +6,8 @@ import io
 from flask import Response, flash, g, redirect, render_template, request, url_for
 
 from core.admin_rbac import require_admin_role as _require_admin
+from core.audit_filters import audit_where_from_request as _audit_where_from_request
 from core.db import db_fetchall
-from routes.admin_parts.helpers import (
-    audit_where_from_request as _audit_where_from_request,
-)
 
 
 def _placeholder() -> str:
