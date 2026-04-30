@@ -113,11 +113,6 @@ def _validate_supervisor_phone(data: dict[str, Any], errors: list[str]) -> None:
 
 
 def _validate_employment_fields(data: dict[str, Any], errors: list[str]) -> None:
-    """
-    Recovery profile saves include employment fields only to preserve existing values.
-    Employment and income validation belongs to the Income Support module.
-    Do not block profile updates because an older employment snapshot is incomplete.
-    """
     status_value = (clean(data.get("employment_status_current")) or "").lower()
     employment_type_value = (clean(data.get("employment_type_current")) or "").lower()
 
@@ -131,6 +126,43 @@ def _validate_employment_fields(data: dict[str, Any], errors: list[str]) -> None
 
     data["employment_status_current"] = status_value or None
     data["employment_type_current"] = employment_type_value or None
+
+    if status_value == "employed":
+        if not data.get("employer_name"):
+            errors.append("Employer is required when Employment Status is Employed.")
+        if not employment_type_value:
+            errors.append("Employment Type is required when Employment Status is Employed.")
+        if not data.get("supervisor_name"):
+            errors.append("Supervisor Name is required when Employment Status is Employed.")
+        if not data.get("supervisor_phone"):
+            errors.append("Supervisor Phone is required when Employment Status is Employed.")
+        data["unemployment_reason"] = None
+
+    elif status_value == "unemployed":
+        if not data.get("unemployment_reason"):
+            errors.append("Unemployment Reason is required when Employment Status is Unemployed.")
+
+        data["employer_name"] = None
+        data["employment_type_current"] = None
+        data["monthly_income"] = None
+        data["current_job_start_date"] = None
+        data["continuous_employment_start_date"] = None
+        data["previous_job_end_date"] = None
+        data["upward_job_change"] = None
+        data["supervisor_name"] = None
+        data["supervisor_phone"] = None
+
+    else:
+        data["employer_name"] = None
+        data["employment_type_current"] = None
+        data["unemployment_reason"] = None
+        data["monthly_income"] = None
+        data["current_job_start_date"] = None
+        data["continuous_employment_start_date"] = None
+        data["previous_job_end_date"] = None
+        data["upward_job_change"] = None
+        data["supervisor_name"] = None
+        data["supervisor_phone"] = None
 
 
 def _validate_employment_date_order(data: dict[str, Any], errors: list[str]) -> None:
