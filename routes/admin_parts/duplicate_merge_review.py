@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 
 from flask import flash, redirect, render_template, request, session, url_for
 
+from core.admin_rbac import require_admin_role
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
-from routes.admin_parts.helpers import require_admin_role
 from routes.case_management_parts.helpers import placeholder
 
 _ACTIVE_RESIDENT_SQL = """
