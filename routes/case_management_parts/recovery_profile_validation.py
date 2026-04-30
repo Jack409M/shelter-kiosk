@@ -132,8 +132,6 @@ def _validate_employment_fields(data: dict[str, Any], errors: list[str]) -> None
             errors.append("Employer is required when Employment Status is Employed.")
         if not employment_type_value:
             errors.append("Employment Type is required when Employment Status is Employed.")
-        if not data.get("supervisor_name"):
-            errors.append("Supervisor Name is required when Employment Status is Employed.")
         if not data.get("supervisor_phone"):
             errors.append("Supervisor Phone is required when Employment Status is Employed.")
         data["unemployment_reason"] = None
@@ -157,9 +155,6 @@ def _validate_employment_fields(data: dict[str, Any], errors: list[str]) -> None
         data["employment_type_current"] = None
         data["unemployment_reason"] = None
         data["monthly_income"] = None
-        data["current_job_start_date"] = None
-        data["continuous_employment_start_date"] = None
-        data["previous_job_end_date"] = None
         data["upward_job_change"] = None
         data["supervisor_name"] = None
         data["supervisor_phone"] = None
