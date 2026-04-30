@@ -56,7 +56,44 @@ def _table_is_readable(table_name: str) -> bool:
         return False
 
 
+def _microsoft_sso_is_configured() -> bool:
+    return (
+        _env_truthy("MS_SSO_ENABLED")
+        and bool(_env("MS_CLIENT_ID"))
+        and bool(_env("MS_CLIENT_SECRET"))
+        and bool(_env("MS_TENANT_ID"))
+    )
+
+
 def _identity_provider_card() -> dict[str, str]:
+    if _microsoft_sso_is_configured():
+        return _status(
+            "identity_provider",
+            "Identity Provider",
+            "ok",
+            "Microsoft Entra ID staff login is configured and enabled.",
+            "Admin",
+            "Keep local break glass admin credentials documented and test SSO after secret rotation.",
+        )
+
+    if _env_truthy("MS_SSO_ENABLED"):
+        missing = []
+        if not _env("MS_CLIENT_ID"):
+            missing.append("MS_CLIENT_ID")
+        if not _env("MS_CLIENT_SECRET"):
+            missing.append("MS_CLIENT_SECRET")
+        if not _env("MS_TENANT_ID"):
+            missing.append("MS_TENANT_ID")
+
+        return _status(
+            "identity_provider",
+            "Identity Provider",
+            "error",
+            "Microsoft SSO is enabled, but required Microsoft settings are missing.",
+            "Admin",
+            "Add missing Railway variables: " + ", ".join(missing),
+        )
+
     if _env_truthy("IDENTITY_PROVIDER_ENABLED"):
         provider = _env("IDENTITY_PROVIDER_NAME") or "configured provider"
         has_oidc = bool(_env("OIDC_ISSUER_URL") and _env("OIDC_CLIENT_ID"))
@@ -87,7 +124,7 @@ def _identity_provider_card() -> dict[str, str]:
         "warn",
         "Staff login is still local username and password, not SSO backed.",
         "Admin",
-        "Select Google Workspace, Azure AD, Okta, or another provider and configure OIDC or SAML.",
+        "Configure Microsoft Entra ID SSO or another approved identity provider.",
     )
 
 
