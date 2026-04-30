@@ -35,6 +35,20 @@ def _ua_log_redirect(resident_id: int):
     return redirect(_ua_log_url(resident_id))
 
 
+def _edit_ua_log_url(resident_id: int, ua_id: int):
+    query_args = _return_query_args()
+    return url_for(
+        "case_management.edit_ua_log",
+        resident_id=resident_id,
+        ua_id=ua_id,
+        **query_args,
+    )
+
+
+def _edit_ua_log_redirect(resident_id: int, ua_id: int):
+    return redirect(_edit_ua_log_url(resident_id, ua_id))
+
+
 def _form_came_from_cwr() -> bool:
     return_to = (
         request.form.get("return_to")
@@ -284,7 +298,7 @@ def edit_ua_log_view(resident_id: int, ua_id: int):
     if errors:
         for error in errors:
             flash(error, "error")
-        return _post_submit_redirect(resident_id)
+        return _edit_ua_log_redirect(resident_id, ua_id)
 
     now = utcnow_iso()
 
@@ -320,7 +334,7 @@ def edit_ua_log_view(resident_id: int, ua_id: int):
         flash(
             "Unable to update UA log entry. Please try again or contact an administrator.", "error"
         )
-        return _post_submit_redirect(resident_id)
+        return _edit_ua_log_redirect(resident_id, ua_id)
 
     flash("UA log entry updated.", "success")
     return _post_submit_redirect(resident_id)
