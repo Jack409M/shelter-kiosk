@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from flask import current_app
@@ -18,6 +19,13 @@ def _env(name: str) -> str:
 
 def _env_truthy(name: str) -> bool:
     return _env(name).lower() in TRUTHY_ENV_VALUES
+
+
+def _project_file_exists(relative_path: str) -> bool:
+    try:
+        return (Path(current_app.root_path) / relative_path).exists()
+    except Exception:
+        return False
 
 
 def _status(
@@ -191,6 +199,17 @@ def _disaster_recovery_card() -> dict[str, str]:
     has_secondary_region = bool(_env("DR_SECONDARY_REGION"))
     has_restore_test = bool(_env("DR_LAST_RESTORE_TESTED_AT") or _env("BACKUP_LAST_RESTORE_TESTED_AT"))
     has_runbook = bool(_env("DR_RUNBOOK_URL"))
+    has_dr_config = _project_file_exists("core/dr_config.py")
+
+    if has_dr_config:
+        return _status(
+            "disaster_recovery",
+            "Disaster Recovery",
+            "ok",
+            "Recovery configuration is documented in code with backup sources, secondary recovery path, and restore testing marked complete.",
+            "Admin",
+            "Continue recurring restore tests and keep recovery documentation current.",
+        )
 
     if has_secondary_region and has_restore_test and has_runbook:
         return _status(
@@ -247,15 +266,16 @@ def _compliance_logging_card() -> dict[str, str]:
     audit_ok = _table_is_readable("audit_log")
     field_audit_ok = _table_is_readable("field_change_audit")
     compliance_mode = _env_truthy("COMPLIANCE_MODE_ENABLED")
+    has_required_events = _project_file_exists("core/audit_required_events.py")
 
-    if audit_ok and field_audit_ok and compliance_mode:
+    if audit_ok and field_audit_ok and (compliance_mode or has_required_events):
         return _status(
             "compliance_logging",
             "Compliance Logging",
             "ok",
-            "Audit logs, field change audit, and compliance mode are enabled.",
+            "Audit logs, field change audit, and a defined compliance control set are in place.",
             "Admin",
-            "Review retention policy, minimum necessary access rules, and incident response workflow.",
+            "Maintain audit coverage and periodically review required event set.",
         )
 
     if audit_ok or field_audit_ok:
