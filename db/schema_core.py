@@ -171,6 +171,42 @@ def ensure_audit_log_table(kind: str) -> None:
     )
 
 
+def ensure_field_change_audit_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS field_change_audit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            table_name TEXT NOT NULL,
+            field_name TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT,
+            changed_by_user_id INTEGER,
+            shelter TEXT,
+            change_reason TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS field_change_audit (
+            id SERIAL PRIMARY KEY,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            table_name TEXT NOT NULL,
+            field_name TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT,
+            changed_by_user_id INTEGER,
+            shelter TEXT,
+            change_reason TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_columns_and_security_upgrades(kind: str) -> None:
     upgrades = (
         ("staff_users", "first_name TEXT"),
@@ -183,6 +219,7 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
         ("security_settings", "admin_login_only_expires_at TEXT"),
         ("security_settings", "security_alerts_expires_at TEXT"),
         ("audit_log", "action_details TEXT NOT NULL DEFAULT ''"),
+        ("field_change_audit", "change_reason TEXT NOT NULL DEFAULT ''"),
     )
 
     for table_name, column_sql in upgrades:
@@ -229,4 +266,5 @@ def ensure_tables(kind: str) -> None:
     ensure_security_config_history_table(kind)
     ensure_security_incidents_table(kind)
     ensure_audit_log_table(kind)
+    ensure_field_change_audit_table(kind)
     ensure_organizations_table(kind)
