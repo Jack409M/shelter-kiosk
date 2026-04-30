@@ -4,10 +4,10 @@ from datetime import UTC, datetime
 
 from flask import flash, g, redirect, request, session, url_for
 
+from core.admin_rbac import require_admin_role
 from core.audit import log_action
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from db.schema_admin import ensure_resident_merge_history_table
-from routes.admin_parts.helpers import require_admin_role
 from routes.case_management_parts.helpers import placeholder
 
 _ACTIVE_RESIDENT_SQL = """
