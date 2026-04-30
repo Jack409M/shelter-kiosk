@@ -399,34 +399,10 @@ def _handle_create(
     review_passed: bool,
     is_edit_mode: bool,
 ):
+    del resident_id
+    del is_edit_mode
+
     try:
-        final_duplicate = _find_duplicate_for_data(data=data, current_shelter=current_shelter)
-
-        if final_duplicate:
-            duplicate_identifier, duplicate_first_name, duplicate_last_name = duplicate_identity(
-                final_duplicate
-            )
-
-            from routes.case_management_parts.intake_drafts import _save_intake_draft
-
-            saved_draft_id = _save_intake_draft(
-                current_shelter=current_shelter,
-                form=request.form,
-                draft_id=draft_id,
-                status="pending_duplicate_review",
-            )
-
-            flash(
-                f"Possible duplicate resident found during final save: "
-                f"{duplicate_first_name} {duplicate_last_name} "
-                f"(Resident ID: {duplicate_identifier or 'unknown'}). "
-                f"No new resident was created.",
-                "warning",
-            )
-            return redirect(
-                url_for("case_management.intake_duplicate_review", draft_id=saved_draft_id)
-            )
-
         create_result = create_intake(
             current_shelter=current_shelter,
             data=data,
@@ -443,8 +419,8 @@ def _handle_create(
         return _render_intake_form_from_request(
             current_shelter=current_shelter,
             review_passed=review_passed,
-            is_edit_mode=is_edit_mode,
-            resident_id=resident_id,
+            is_edit_mode=False,
+            resident_id=None,
         )
 
     flash(
