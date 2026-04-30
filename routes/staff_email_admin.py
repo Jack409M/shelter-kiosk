@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from core.audit import log_action
-from core.db import db_execute, db_fetchall
-from core.runtime import init_db
-from routes.admin_parts.helpers import (
+from core.admin_rbac import (
     current_role as _current_role,
     require_admin_or_shelter_director_role as _require_admin_or_shelter_director,
 )
+from core.audit import log_action
+from core.db import db_execute, db_fetchall
+from core.runtime import init_db
 
 staff_email_admin = Blueprint("staff_email_admin", __name__)
 
