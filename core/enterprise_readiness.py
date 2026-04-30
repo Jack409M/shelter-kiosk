@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import current_app
 
-from core.db import db_fetchone
+from core.db import db_execute, db_fetchone
 from core.system_alerts import create_system_alert
 
 TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
@@ -199,7 +199,18 @@ def _disaster_recovery_card() -> dict[str, str]:
     has_secondary_region = bool(_env("DR_SECONDARY_REGION"))
     has_restore_test = bool(_env("DR_LAST_RESTORE_TESTED_AT") or _env("BACKUP_LAST_RESTORE_TESTED_AT"))
     has_runbook = bool(_env("DR_RUNBOOK_URL"))
-    has_dr_config = _project_file_exists("core/dr_config.py")
+
+    try:
+        from core.dr_config import DR_CONFIG
+
+        has_dr_config = bool(
+            DR_CONFIG.get("secondary_ready")
+            and DR_CONFIG.get("restore_tested")
+            and DR_CONFIG.get("runbook_documented")
+        )
+    except Exception:
+        current_app.logger.exception("disaster_recovery_config_check_failed")
+        has_dr_config = False
 
     if has_dr_config:
         return _status(
@@ -266,7 +277,14 @@ def _compliance_logging_card() -> dict[str, str]:
     audit_ok = _table_is_readable("audit_log")
     field_audit_ok = _table_is_readable("field_change_audit")
     compliance_mode = _env_truthy("COMPLIANCE_MODE_ENABLED")
-    has_required_events = _project_file_exists("core/audit_required_events.py")
+
+    try:
+        from core.audit_required_events import REQUIRED_AUDIT_EVENTS
+
+        has_required_events = bool(REQUIRED_AUDIT_EVENTS)
+    except Exception:
+        current_app.logger.exception("audit_required_events_check_failed")
+        has_required_events = False
 
     if audit_ok and field_audit_ok and (compliance_mode or has_required_events):
         return _status(
@@ -317,16 +335,52 @@ def _severity_for_state(state: str) -> str:
     return "info"
 
 
+def _resolve_open_enterprise_alerts_for_card(key: str, checked_at: str) -> None:
+    alert_keys = (
+        f"enterprise_readiness:{key}:warn",
+        f"enterprise_readiness:{key}:error",
+    )
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+
+    db_execute(
+        """
+        UPDATE system_alerts
+        SET status = %s,
+            resolved_at = %s,
+            resolution_note = %s,
+            updated_at = %s
+        WHERE alert_key IN %s
+          AND status = %s
+        """,
+        (
+            "resolved",
+            now,
+            f"Enterprise readiness check returned OK at {checked_at}.",
+            now,
+            alert_keys,
+            "open",
+        ),
+    )
+
+
 def sync_enterprise_readiness_alerts(cards: list[dict[str, Any]]) -> int:
     created = 0
     checked_at = datetime.now(UTC).isoformat(timespec="seconds")
 
     for card in cards or []:
         state = str(card.get("state") or "").strip().lower()
+        key = str(card.get("key") or "enterprise_control").strip()
+
+        if state == "ok":
+            try:
+                _resolve_open_enterprise_alerts_for_card(key, checked_at)
+            except Exception:
+                current_app.logger.exception("enterprise_readiness_alert_auto_resolve_failed key=%s", key)
+            continue
+
         if state not in {"warn", "error"}:
             continue
 
-        key = str(card.get("key") or "enterprise_control").strip()
         label = str(card.get("label") or "Enterprise control").strip()
         detail = str(card.get("detail") or "Enterprise readiness check needs attention.").strip()
         next_step = str(card.get("next_step") or "Review this enterprise control.").strip()
