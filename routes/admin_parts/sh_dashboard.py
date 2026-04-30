@@ -13,9 +13,11 @@ from core.enterprise_readiness import (
 )
 from core.sh_events import latest_sh_event_by_status, recent_sh_events_by_status
 from core.system_alerts import (
+    acknowledge_system_alert,
     count_open_system_alerts_by_severity,
     create_system_alert,
     load_open_system_alerts,
+    load_recent_system_alert_delivery_logs,
     resolve_system_alert,
     sync_system_health_alerts,
 )
@@ -276,6 +278,20 @@ def system_health_events_api():
     return jsonify(rows)
 
 
+def acknowledge_system_health_alert_view(alert_id: int):
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    note = request.form.get("acknowledgement_note", "")
+    if acknowledge_system_alert(alert_id, acknowledgement_note=note):
+        flash("System alert acknowledged.", "success")
+    else:
+        flash("System alert was not found.", "error")
+
+    return redirect(url_for("admin.admin_system_health"))
+
+
 def resolve_system_health_alert_view(alert_id: int):
     if not require_admin_role():
         flash("Admin only.", "error")
@@ -314,6 +330,7 @@ def system_health_dashboard_view():
     sync_enterprise_readiness_alerts(enterprise_cards)
     alerts = load_open_system_alerts()
     alert_counts = count_open_system_alerts_by_severity()
+    delivery_logs = load_recent_system_alert_delivery_logs()
 
     summary_state = "ok"
     if any(card["state"] == "error" for card in cards) or alert_counts.get("critical"):
@@ -329,6 +346,7 @@ def system_health_dashboard_view():
         enterprise_cards=enterprise_cards,
         alerts=alerts,
         alert_counts=alert_counts,
+        delivery_logs=delivery_logs,
         summary_state=summary_state,
         checked_at=checked_at,
     )
