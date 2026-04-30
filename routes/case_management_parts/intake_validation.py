@@ -28,19 +28,46 @@ class IntakeFormLike(Protocol):
         pass
 
 
-def _form_getlist(form: IntakeFormLike, key: str) -> list[Any]:
-    getlist = getattr(form, "getlist", None)
-    if callable(getlist):
-        values = getlist(key)
-        return list(values) if isinstance(values, Sequence) else []
+INTERNAL_PRESENT_FIELDS_KEY = "__present_fields"
 
-    value = form.get(key)  # type: ignore[attr-defined]
-    if value is None:
-        return []
-    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
-        return list(value)
-    return [value]
+REQUIRED_FIELDS: tuple[str, ...] = (
+    "first_name",
+    "last_name",
+    "entry_date",
+    "birth_year",
+    "shelter",
+    "program_status",
+    "emergency_contact_name",
+    "emergency_contact_relationship",
+    "emergency_contact_phone",
+    "prior_living",
+    "employment_status",
+)
 
+REQUIRED_FIELD_LABELS: dict[str, str] = {
+    "first_name": "First name",
+    "last_name": "Last name",
+    "entry_date": "Date Entered",
+    "birth_year": "Birth Year",
+    "shelter": "Shelter",
+    "program_status": "Program Status",
+    "emergency_contact_name": "Emergency Contact Name",
+    "emergency_contact_relationship": "Emergency Contact Relationship",
+    "emergency_contact_phone": "Emergency Contact Phone",
+    "prior_living": "Prior Living",
+    "employment_status": "Employment Status",
+}
+
+EMPLOYED_STATUS_VALUES = {
+    "employed_full_time",
+    "employed_part_time",
+}
+
+TREATMENT_STATUS_VALUES = {
+    "not_applicable",
+    "in_progress",
+    "completed",
+}
 
 ALLOWED_GENDER_VALUES = {"m", "f"}
 
@@ -55,6 +82,21 @@ ALLOWED_DISABILITY_VALUES = {
     "Multiple",
 }
 
+YES_NO_FIELDS: tuple[str, ...] = (
+    "veteran",
+    "pregnant",
+    "sexual_survivor",
+    "domestic_violence_history",
+    "human_trafficking_history",
+    "drug_court",
+    "felony_history",
+    "probation_parole",
+    "car_at_entry",
+    "car_insurance_at_entry",
+    "receives_snap_at_entry",
+    "has_children",
+)
+
 INCOME_COMPONENT_FIELDS: tuple[str, ...] = (
     "employment_income_1",
     "employment_income_2",
@@ -64,6 +106,12 @@ INCOME_COMPONENT_FIELDS: tuple[str, ...] = (
     "child_support_income",
     "alimony_income",
     "other_income",
+)
+
+EMPLOYMENT_INCOME_FIELDS: tuple[str, ...] = (
+    "employment_income_1",
+    "employment_income_2",
+    "employment_income_3",
 )
 
 FAMILY_COUNT_FIELDS: tuple[str, ...] = (
@@ -77,8 +125,35 @@ FAMILY_COUNT_FIELDS: tuple[str, ...] = (
 )
 
 
+def _form_getlist(form: IntakeFormLike, key: str) -> list[Any]:
+    getlist = getattr(form, "getlist", None)
+    if callable(getlist):
+        values = getlist(key)
+        return list(values) if isinstance(values, Sequence) else []
+
+    value = form.get(key)  # type: ignore[attr-defined]
+    if value is None:
+        return []
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        return list(value)
+    return [value]
+
+
+def _form_has_field(form: IntakeFormLike, key: str) -> bool:
+    try:
+        return key in form  # type: ignore[operator]
+    except TypeError:
+        pass
+
+    keys = getattr(form, "keys", None)
+    if callable(keys):
+        return key in keys()
+
+    return form.get(key, None) is not None
+
+
 def _field_label(field_name: str) -> str:
-    return field_name.replace("_", " ").title()
+    return REQUIRED_FIELD_LABELS.get(field_name, field_name.replace("_", " ").title())
 
 
 def _normalized_email_or_none(value: object) -> str | None:
@@ -101,6 +176,13 @@ def _normalize_yes_no_blank(value: object) -> str:
         return "no"
 
     return ""
+
+
+def _present_fields(data: dict[str, Any]) -> set[str]:
+    raw_present_fields = data.get(INTERNAL_PRESENT_FIELDS_KEY)
+    if isinstance(raw_present_fields, set):
+        return cast(set[str], raw_present_fields)
+    return set()
 
 
 def _rank_duplicate_match(
@@ -228,15 +310,18 @@ def _find_possible_duplicate(
     return _select_best_duplicate(weak_name_only_rows, phone_value, email_value)
 
 
-def _validate_required_identity_fields(data: dict[str, Any], errors: list[str]) -> None:
-    if not data["first_name"]:
-        errors.append("First name is required.")
+def _validate_required_fields(data: dict[str, Any], errors: list[str]) -> None:
+    present_fields = _present_fields(data)
 
-    if not data["last_name"]:
-        errors.append("Last name is required.")
+    for field_name in REQUIRED_FIELDS:
+        field_value = data.get(field_name)
 
-    if not data["entry_date"]:
-        errors.append("Date Entered is required.")
+        if field_name not in present_fields:
+            errors.append(f"{_field_label(field_name)} is required.")
+            continue
+
+        if field_value in (None, ""):
+            errors.append(f"{_field_label(field_name)} is required.")
 
 
 def _validate_shelter_scope(
@@ -309,12 +394,23 @@ def _validate_date_fields(data: dict[str, Any], errors: list[str]) -> None:
     else:
         data["days_sober_at_entry"] = None
 
+    data["entry_date"] = entry_date_value.isoformat() if entry_date_value else None
+    data["sobriety_date"] = sobriety_date_value.isoformat() if sobriety_date_value else None
+    data["treatment_grad_date"] = (
+        treatment_grad_date_value.isoformat() if treatment_grad_date_value else None
+    )
+
 
 def _validate_phone_and_email(data: dict[str, Any], errors: list[str]) -> None:
     phone_value = _normalized_phone_or_none(data.get("phone"))
     if phone_value is not None and len(phone_value) < 10:
         errors.append("Phone must contain at least 10 digits.")
     data["phone"] = phone_value
+
+    emergency_phone_value = _normalized_phone_or_none(data.get("emergency_contact_phone"))
+    if emergency_phone_value is not None and len(emergency_phone_value) < 10:
+        errors.append("Emergency Contact Phone must contain at least 10 digits.")
+    data["emergency_contact_phone"] = emergency_phone_value
 
     email_value = _normalized_email_or_none(data.get("email"))
     if email_value and ("@" not in email_value or "." not in email_value.rsplit("@", 1)[-1]):
@@ -375,8 +471,50 @@ def _validate_family_count_fields(data: dict[str, Any], errors: list[str]) -> No
         data[field_name] = parsed_value
 
 
-def _normalize_snap_field(data: dict[str, Any]) -> None:
-    data["receives_snap_at_entry"] = _normalize_yes_no_blank(data.get("receives_snap_at_entry"))
+def _normalize_yes_no_fields(data: dict[str, Any]) -> None:
+    present_fields = _present_fields(data)
+
+    for field_name in YES_NO_FIELDS:
+        if field_name in present_fields or field_name in data:
+            data[field_name] = _normalize_yes_no_blank(data.get(field_name))
+
+
+def _validate_conditional_fields(data: dict[str, Any], errors: list[str]) -> None:
+    present_fields = _present_fields(data)
+
+    employment_status = clean(data.get("employment_status"))
+    if employment_status in EMPLOYED_STATUS_VALUES:
+        employment_income_total = 0.0
+        employment_income_present = False
+
+        for field_name in EMPLOYMENT_INCOME_FIELDS:
+            parsed_value = data.get(field_name)
+            if parsed_value is not None:
+                employment_income_present = True
+                employment_income_total += float(parsed_value)
+
+        if not employment_income_present or employment_income_total <= 0:
+            errors.append("Employment income is required when employment status is employed.")
+
+    if data.get("car_at_entry") == "yes" and not data.get("car_insurance_at_entry"):
+        errors.append("Car insurance at entry is required when car at entry is yes.")
+
+    if "treatment_status" in present_fields:
+        treatment_status = clean(data.get("treatment_status"))
+        data["treatment_status"] = treatment_status
+
+        if treatment_status and treatment_status not in TREATMENT_STATUS_VALUES:
+            errors.append("Treatment Status must be Not Applicable, In Progress, or Completed.")
+
+        if treatment_status == "completed" and not data.get("treatment_grad_date"):
+            errors.append(
+                "Treatment Graduation Date is required when Treatment Status is completed."
+            )
+
+    if "has_children" in present_fields:
+        has_children = data.get("has_children")
+        if has_children and has_children not in {"yes", "no"}:
+            errors.append("Has Children must be yes or no.")
 
 
 def _apply_benefits_screening_need(data: dict[str, Any]) -> None:
@@ -393,7 +531,80 @@ def _apply_benefits_screening_need(data: dict[str, Any]) -> None:
 
 def _build_intake_data(form: IntakeFormLike, shelter: str) -> dict[str, Any]:
     normalized_need_keys = normalize_selected_need_keys(_form_getlist(form, "entry_need"))
-    normalized_shelter = normalize_shelter_name(form.get("shelter") or shelter)
+
+    present_fields = {
+        field_name
+        for field_name in (
+            "first_name",
+            "middle_name",
+            "last_name",
+            "birth_year",
+            "phone",
+            "email",
+            "gender",
+            "veteran",
+            "emergency_contact_name",
+            "emergency_contact_relationship",
+            "emergency_contact_phone",
+            "notes_basic",
+            "entry_date",
+            "shelter",
+            "program_status",
+            "prior_living",
+            "city",
+            "county",
+            "last_zipcode_residence",
+            "length_of_time_in_amarillo",
+            "marital_status",
+            "treatment_status",
+            "treatment_grad_date",
+            "sobriety_date",
+            "drug_of_choice",
+            "income_at_entry",
+            "education_at_entry",
+            "disability",
+            "dwc_level_today",
+            "entry_notes",
+            "race",
+            "ethnicity",
+            "pregnant",
+            "employment_status",
+            "initial_snapshot_notes",
+            "ace_score",
+            "grit_score",
+            "sexual_survivor",
+            "domestic_violence_history",
+            "human_trafficking_history",
+            "drug_court",
+            "felony_history",
+            "probation_parole",
+            "barrier_notes",
+            "car_at_entry",
+            "car_insurance_at_entry",
+            "has_children",
+            "kids_at_dwc",
+            "kids_served_outside_under_18",
+            "kids_ages_0_5",
+            "kids_ages_6_11",
+            "kids_ages_12_17",
+            "kids_reunited_while_in_program",
+            "healthy_babies_born_at_dwc",
+            "employment_income_1",
+            "employment_income_2",
+            "employment_income_3",
+            "ssi_ssdi_income",
+            "tanf_income",
+            "child_support_income",
+            "alimony_income",
+            "other_income",
+            "other_income_description",
+            "receives_snap_at_entry",
+        )
+        if _form_has_field(form, field_name)
+    }
+
+    raw_shelter = clean(form.get("shelter"))
+    normalized_shelter = normalize_shelter_name(raw_shelter or shelter)
 
     data: dict[str, Any] = {
         "first_name": clean(form.get("first_name")),
@@ -410,13 +621,14 @@ def _build_intake_data(form: IntakeFormLike, shelter: str) -> dict[str, Any]:
         "notes_basic": clean(form.get("notes_basic")),
         "entry_date": clean(form.get("entry_date")),
         "shelter": normalized_shelter,
-        "program_status": clean(form.get("program_status")) or "active",
+        "program_status": clean(form.get("program_status")),
         "prior_living": clean(form.get("prior_living")),
         "city": clean(form.get("city")),
         "county": clean(form.get("county")),
         "last_zipcode_residence": clean(form.get("last_zipcode_residence")),
         "length_of_time_in_amarillo": clean(form.get("length_of_time_in_amarillo")),
         "marital_status": clean(form.get("marital_status")),
+        "treatment_status": clean(form.get("treatment_status")),
         "treatment_grad_date": clean(form.get("treatment_grad_date")),
         "sobriety_date": clean(form.get("sobriety_date")),
         "drug_of_choice": clean(form.get("drug_of_choice")),
@@ -441,6 +653,7 @@ def _build_intake_data(form: IntakeFormLike, shelter: str) -> dict[str, Any]:
         "barrier_notes": clean(form.get("barrier_notes")),
         "car_at_entry": clean(form.get("car_at_entry")),
         "car_insurance_at_entry": clean(form.get("car_insurance_at_entry")),
+        "has_children": clean(form.get("has_children")),
         "kids_at_dwc": clean(form.get("kids_at_dwc")),
         "kids_served_outside_under_18": clean(form.get("kids_served_outside_under_18")),
         "kids_ages_0_5": clean(form.get("kids_ages_0_5")),
@@ -460,6 +673,7 @@ def _build_intake_data(form: IntakeFormLike, shelter: str) -> dict[str, Any]:
         "receives_snap_at_entry": clean(form.get("receives_snap_at_entry")),
         "entry_need_keys": normalized_need_keys,
         "days_sober_at_entry": None,
+        INTERNAL_PRESENT_FIELDS_KEY: present_fields,
     }
 
     for need_key in normalized_need_keys:
@@ -474,7 +688,8 @@ def _validate_intake_form(form: IntakeFormLike, shelter: str) -> tuple[dict[str,
 
     errors: list[str] = []
 
-    _validate_required_identity_fields(data, errors)
+    _normalize_yes_no_fields(data)
+    _validate_required_fields(data, errors)
     _validate_shelter_scope(data, normalized_selected_shelter, errors)
     _validate_gender_and_disability(data, errors)
     _validate_birth_year(data, errors)
@@ -483,8 +698,10 @@ def _validate_intake_form(form: IntakeFormLike, shelter: str) -> tuple[dict[str,
     _validate_zipcode(data, errors)
     _validate_scored_fields(data, errors)
     _validate_income_fields(data, errors)
-    _normalize_snap_field(data)
     _validate_family_count_fields(data, errors)
+    _validate_conditional_fields(data, errors)
     _apply_benefits_screening_need(data)
+
+    data.pop(INTERNAL_PRESENT_FIELDS_KEY, None)
 
     return data, errors
