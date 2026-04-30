@@ -10,6 +10,8 @@ from urllib.request import Request, urlopen
 
 from flask import current_app, has_app_context
 
+from core.db import db_execute
+from core.helpers import utcnow_iso
 from core.sh_events import safe_log_sh_event
 
 TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
@@ -86,6 +88,54 @@ def _alert_body(alert: dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
+def _safe_metadata(metadata: dict[str, Any] | None) -> str:
+    try:
+        return json.dumps(metadata or {}, sort_keys=True)
+    except Exception:
+        return json.dumps({"metadata_error": "metadata could not be serialized"})
+
+
+def _log_delivery_row(
+    *,
+    channel: str,
+    status: str,
+    alert: dict[str, Any],
+    message: str,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    try:
+        db_execute(
+            """
+            INSERT INTO system_alert_delivery_logs (
+                alert_key,
+                alert_type,
+                severity,
+                title,
+                channel,
+                delivery_status,
+                message,
+                metadata,
+                created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                _safe_text(alert.get("alert_key"), 240),
+                _safe_text(alert.get("alert_type"), 120),
+                _normalize_severity(alert.get("severity")),
+                _safe_text(alert.get("title"), 240),
+                _safe_text(channel, 40),
+                _safe_text(status, 40),
+                _safe_text(message, 1000),
+                _safe_metadata(metadata),
+                utcnow_iso(),
+            ),
+        )
+    except Exception:
+        if has_app_context():
+            current_app.logger.exception("system_alert_delivery_log_insert_failed")
+
+
 def _log_delivery(
     *,
     channel: str,
@@ -94,6 +144,13 @@ def _log_delivery(
     message: str,
     metadata: dict[str, Any] | None = None,
 ) -> None:
+    event_metadata = {
+        "alert_key": _safe_text(alert.get("alert_key"), 240),
+        "severity": _normalize_severity(alert.get("severity")),
+        "channel": channel,
+        **(metadata or {}),
+    }
+
     safe_log_sh_event(
         event_type="system_alert_delivery",
         event_status=status,
@@ -101,12 +158,15 @@ def _log_delivery(
         entity_type="system_alert",
         entity_id=None,
         message=message,
-        metadata={
-            "alert_key": _safe_text(alert.get("alert_key"), 240),
-            "severity": _normalize_severity(alert.get("severity")),
-            "channel": channel,
-            **(metadata or {}),
-        },
+        metadata=event_metadata,
+    )
+
+    _log_delivery_row(
+        channel=channel,
+        status=status,
+        alert=alert,
+        message=message,
+        metadata=event_metadata,
     )
 
 
@@ -145,11 +205,11 @@ def _send_email(alert: dict[str, Any]) -> bool:
     except Exception:
         smtp_port = 587
 
-    message = EmailMessage()
-    message["Subject"] = _alert_subject(alert)
-    message["From"] = smtp_from
-    message["To"] = ", ".join(recipients)
-    message.set_content(_alert_body(alert))
+    email_message = EmailMessage()
+    email_message["Subject"] = _alert_subject(alert)
+    email_message["From"] = smtp_from
+    email_message["To"] = ", ".join(recipients)
+    email_message.set_content(_alert_body(alert))
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
@@ -157,7 +217,7 @@ def _send_email(alert: dict[str, Any]) -> bool:
                 server.starttls()
             if smtp_user and smtp_password:
                 server.login(smtp_user, smtp_password)
-            server.send_message(message)
+            server.send_message(email_message)
 
         _log_delivery(
             channel="email",
@@ -345,6 +405,13 @@ def _send_sms(alert: dict[str, Any]) -> bool:
 def deliver_system_alert(alert: dict[str, Any]) -> dict[str, bool]:
     severity = _normalize_severity(alert.get("severity"))
     if not _should_deliver(severity):
+        _log_delivery(
+            channel="all",
+            status="skipped",
+            alert=alert,
+            message="System alert delivery skipped because severity is below configured minimum.",
+            metadata={"minimum_severity": _minimum_severity(), "severity": severity},
+        )
         return {"email": False, "webhook": False, "sms": False}
 
     return {
