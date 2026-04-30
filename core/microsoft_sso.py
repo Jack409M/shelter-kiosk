@@ -1,20 +1,33 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
-from authlib.integrations.flask_client import OAuth
 from flask import current_app
+
+try:
+    from authlib.integrations.flask_client import OAuth
+except ImportError:
+    OAuth = None  # type: ignore[assignment]
+
+
+def authlib_available() -> bool:
+    return OAuth is not None
 
 
 def microsoft_sso_enabled() -> bool:
     return (
-        os.environ.get("MS_SSO_ENABLED", "false").lower() == "true"
-        and os.environ.get("MS_CLIENT_ID")
-        and os.environ.get("MS_CLIENT_SECRET")
+        authlib_available()
+        and os.environ.get("MS_SSO_ENABLED", "false").lower() == "true"
+        and bool(os.environ.get("MS_CLIENT_ID"))
+        and bool(os.environ.get("MS_CLIENT_SECRET"))
     )
 
 
-def get_microsoft_client():
+def get_microsoft_client() -> Any:
+    if OAuth is None:
+        raise RuntimeError("Microsoft SSO is not available because authlib is not installed.")
+
     tenant = os.environ.get("MS_TENANT_ID", "organizations")
 
     oauth = OAuth(current_app)
