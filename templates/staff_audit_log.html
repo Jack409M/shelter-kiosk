@@ -39,6 +39,31 @@
     max-width: 520px;
   }
 
+  .audit-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .audit-badge-change {
+    background: #e8f7e8;
+  }
+
+  .audit-badge-action {
+    background: #e8f0ff;
+  }
+
+  .change-value {
+    white-space: normal;
+    word-break: break-word;
+    max-width: 280px;
+  }
+
   .filter-card {
     background: var(--card, #e4f0f8);
     border: 1px solid #000;
@@ -116,6 +141,7 @@
 {% set staff_user_id_val = request.args.get('staff_user_id', '') %}
 {% set entity_type_val = request.args.get('entity_type', '') %}
 {% set action_type_val = request.args.get('action_type', '') %}
+{% set event_source_val = request.args.get('event_source', '') %}
 
 <div class="audit-layout">
 
@@ -125,11 +151,13 @@
         <tr>
           <th>ID</th>
           <th>When</th>
+          <th>Type</th>
           <th>Shelter</th>
           <th>Staff</th>
           <th>Entity</th>
           <th>Entity ID</th>
-          <th>Action</th>
+          <th>Event</th>
+          <th>Change</th>
           <th>Details</th>
         </tr>
       </thead>
@@ -139,17 +167,29 @@
             <tr>
               <td>{{ r.id }}</td>
               <td>{{ r.created_at | app_dt }}</td>
+              <td>
+                {% if r.event_source == 'field_change' %}
+                  <span class="audit-badge audit-badge-change">Change</span>
+                {% else %}
+                  <span class="audit-badge audit-badge-action">Action</span>
+                {% endif %}
+              </td>
               <td>{{ r.shelter | shelter if r.shelter else "" }}</td>
               <td>{{ r.staff_username or "" }}</td>
               <td>{{ r.entity_type or "" }}</td>
               <td>{{ r.entity_id or "" }}</td>
-              <td>{{ r.action_type or "" }}</td>
-              <td class="details">{{ r.action_details or "" }}</td>
+              <td>{{ r.event_type or r.action_type or "" }}</td>
+              <td class="change-value">
+                {% if r.event_source == 'field_change' %}
+                  {{ r.old_value or "" }} → {{ r.new_value or "" }}
+                {% endif %}
+              </td>
+              <td class="details">{{ r.detail or r.action_details or "" }}</td>
             </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="8">No matching audit events.</td>
+            <td colspan="10">No matching audit events.</td>
           </tr>
         {% endif %}
       </tbody>
@@ -165,6 +205,15 @@
         <div class="filter-row">
           <label for="q">Search text</label>
           <input id="q" name="q" type="text" value="{{ q_val }}" placeholder="Name, action, details">
+        </div>
+
+        <div class="filter-row">
+          <label for="event_source">Event Type</label>
+          <select id="event_source" name="event_source">
+            <option value="">All</option>
+            <option value="action" {% if event_source_val == 'action' %}selected{% endif %}>Action</option>
+            <option value="field_change" {% if event_source_val == 'field_change' %}selected{% endif %}>Change</option>
+          </select>
         </div>
 
         <div class="filter-row">
@@ -200,7 +249,7 @@
         </div>
 
         <div class="filter-row">
-          <label for="action_type">Action</label>
+          <label for="action_type">Event</label>
           <select id="action_type" name="action_type">
             <option value="">All</option>
             {% for v in action_options %}
