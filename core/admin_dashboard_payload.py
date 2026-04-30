@@ -18,9 +18,9 @@ from core.security_incidents import (
 from core.security_intelligence import (
     build_attack_intelligence,
     build_attack_map_points,
-    build_threat_scores,
     build_locked_username_snapshot,
     build_recent_staff_sessions,
+    build_threat_scores,
 )
 from core.security_settings import load_security_settings
 

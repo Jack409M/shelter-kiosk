@@ -14,7 +14,6 @@ from routes.case_management_parts.helpers import (
 )
 from routes.case_management_parts.medications_validation import validate_medication_form
 
-
 MEDICATIONS_ACTIVE_PANEL = "medications"
 
 

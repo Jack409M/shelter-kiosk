@@ -10,7 +10,6 @@ from routes.case_management_parts.resident_case_scope import (
     load_resident_in_scope,
 )
 
-
 NOTES_ACTIVE_PANEL = "notes"
 
 

@@ -20,7 +20,6 @@ from routes.case_management_parts.helpers import (
 )
 from routes.case_management_parts.income_state_sync import recalculate_and_sync_income_state_atomic
 
-
 FAMILY_ACTIVE_PANEL = "family"
 CHILD_SERVICES_ACTIVE_PANEL = "child-services"
 

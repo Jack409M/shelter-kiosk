@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, url_for
+from flask import flash, render_template, url_for
 
 from core.runtime import init_db
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
@@ -20,7 +20,6 @@ from routes.case_management_parts.resident_case_scope import (
     load_current_enrollment,
     load_resident_in_scope,
 )
-
 
 CWR_NOTES_ACTIVE_PANEL = "notes"
 

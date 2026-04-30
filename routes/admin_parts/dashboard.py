@@ -14,7 +14,9 @@ from flask import (
 )
 
 from core import rate_limit as rate_limit_store
-from core.admin_dashboard_payload import build_admin_dashboard_payload as _build_admin_dashboard_payload
+from core.admin_dashboard_payload import (
+    build_admin_dashboard_payload as _build_admin_dashboard_payload,
+)
 from core.admin_rbac import current_role as _current_role
 from core.admin_rbac import require_admin_role as _require_admin
 from core.audit import log_action

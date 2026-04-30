@@ -14,7 +14,6 @@ from routes.case_management_parts.helpers import (
 )
 from routes.case_management_parts.ua_log_validation import validate_ua_log_form
 
-
 UA_ACTIVE_PANEL = "ua"
 
 
