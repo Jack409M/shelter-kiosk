@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from flask import current_app, flash, redirect, render_template, request, url_for
 
+from core.admin_rbac import ROLE_ORDER, require_admin_role
 from core.auth import PASS_STATUS_ROLES, REQUEST_MANAGER_ROLES
-from routes.admin_parts.helpers import ROLE_ORDER, require_admin_role
 
 ROLE_LABELS = {
     "admin": "Admin",
