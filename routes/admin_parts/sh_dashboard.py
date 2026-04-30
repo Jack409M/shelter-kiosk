@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
@@ -25,6 +25,7 @@ from core.system_alerts import (
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 PASS_CLEANUP_STALE_THRESHOLD = timedelta(hours=24)
+RECENT_ERROR_ACTIVE_THRESHOLD = timedelta(minutes=15)
 
 
 def _status(label: str, state: str, detail: str = "", meta: str = "") -> dict:
@@ -34,6 +35,30 @@ def _status(label: str, state: str, detail: str = "", meta: str = "") -> dict:
         "detail": detail,
         "meta": meta,
     }
+
+
+def _parse_event_datetime(value: object) -> datetime | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except Exception:
+        current_app.logger.warning("system_health_invalid_event_timestamp=%s", raw)
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+
+    return parsed.astimezone(CHICAGO_TZ)
+
+
+def _event_is_recent(value: object, threshold: timedelta = RECENT_ERROR_ACTIVE_THRESHOLD) -> bool:
+    parsed = _parse_event_datetime(value)
+    if parsed is None:
+        return False
+    return datetime.now(CHICAGO_TZ) - parsed <= threshold
 
 
 def _last_pass_cleanup_finished_at() -> datetime | None:
@@ -259,12 +284,26 @@ def _job_status_cards() -> list[dict]:
         latest_success.get("created_at", "") if latest_success else "Waiting for first event",
     )
 
-    error_card = _status(
-        "Last Error",
-        "error" if latest_error else "ok",
-        latest_error.get("message", "") if latest_error else "No System Health errors recorded.",
-        latest_error.get("created_at", "") if latest_error else "No errors found",
-    )
+    if latest_error:
+        error_created_at = latest_error.get("created_at", "")
+        error_is_recent = _event_is_recent(error_created_at)
+        error_card = _status(
+            "Last Error",
+            "error" if error_is_recent else "ok",
+            latest_error.get("message", ""),
+            (
+                f"Active recent error at {error_created_at}"
+                if error_is_recent
+                else f"Historical error only: {error_created_at}"
+            ),
+        )
+    else:
+        error_card = _status(
+            "Last Error",
+            "ok",
+            "No System Health errors recorded.",
+            "No errors found",
+        )
 
     return [success_card, error_card]
 
