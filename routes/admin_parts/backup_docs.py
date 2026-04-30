@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import flash, redirect, render_template, url_for
 
-from routes.admin_parts.helpers import require_admin_role
+from core.admin_rbac import require_admin_role
 
 
 def admin_backup_documentation_view():
