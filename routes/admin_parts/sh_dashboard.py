@@ -22,6 +22,7 @@ from core.system_alerts import (
     resolve_system_alert,
     sync_system_health_alerts,
 )
+from core.timestamp_normalization import normalize_timestamp_columns
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 PASS_CLEANUP_STALE_THRESHOLD = timedelta(hours=24)
@@ -116,6 +117,45 @@ def _pass_cleanup_card() -> dict:
         state,
         detail,
         f"Finished: {last.get('finished_at', '')}",
+    )
+
+
+def _timestamp_format_card() -> dict:
+    try:
+        result = normalize_timestamp_columns(apply=False)
+    except Exception as err:
+        current_app.logger.exception("timestamp_format_health_check_failed")
+        return _status(
+            "Timestamp Formats",
+            "warn",
+            "Timestamp format scan failed.",
+            str(err),
+        )
+
+    dirty_count = int(result.would_update or 0)
+    skipped_count = int(result.skipped or 0)
+
+    if dirty_count > 0:
+        return _status(
+            "Timestamp Formats",
+            "warn",
+            f"{dirty_count} timestamp value(s) need normalization.",
+            "Use Timestamp Cleanup from this page.",
+        )
+
+    if skipped_count > 0:
+        return _status(
+            "Timestamp Formats",
+            "ok",
+            "Timestamp formats are normalized. Some non parseable legacy values were safely skipped.",
+            f"Skipped legacy values: {skipped_count}",
+        )
+
+    return _status(
+        "Timestamp Formats",
+        "ok",
+        "Timestamp formats are normalized.",
+        f"Scanned {result.scanned} values across {result.columns_discovered} columns",
     )
 
 
@@ -359,6 +399,7 @@ def system_health_dashboard_view():
         _check_sms_status(),
         _check_backup_status(),
         _pass_cleanup_card(),
+        _timestamp_format_card(),
         *_job_status_cards(),
     ]
     enterprise_cards = build_enterprise_readiness_cards()
