@@ -15,22 +15,33 @@ def _parse_dt(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except Exception:
         return None
 
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+
+    return parsed.replace(microsecond=0)
+
+
+def _dt_to_utc_naive_iso(value: datetime) -> str:
+    if value.tzinfo is not None:
+        value = value.astimezone(UTC).replace(tzinfo=None)
+    return value.replace(microsecond=0).isoformat(timespec="seconds")
+
 
 def _utc_naive_now_plus(hours: int) -> str:
-    return (datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=hours)).isoformat(timespec="seconds")
+    return _dt_to_utc_naive_iso(datetime.now(UTC) + timedelta(hours=hours))
 
 
 def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None) -> str | None:
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
-        try:
-            return (datetime.fromisoformat(raw_end_at) + timedelta(hours=48)).isoformat(timespec="seconds")
-        except Exception:
+        parsed_end_at = _parse_dt(raw_end_at)
+        if parsed_end_at is None:
             return None
+        return _dt_to_utc_naive_iso(parsed_end_at + timedelta(hours=48))
 
     raw_end_date = (end_date or "").strip()
     if raw_end_date:
@@ -41,7 +52,7 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
                 tzinfo=CHICAGO_TZ,
             )
             utc_dt = local_dt.astimezone(UTC).replace(tzinfo=None)
-            return (utc_dt + timedelta(hours=48)).isoformat(timespec="seconds")
+            return _dt_to_utc_naive_iso(utc_dt + timedelta(hours=48))
         except Exception:
             return None
 
@@ -51,10 +62,10 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
 def _expected_back_deadline(end_at: str | None, end_date: str | None) -> str | None:
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
-        try:
-            return datetime.fromisoformat(raw_end_at).isoformat(timespec="seconds")
-        except Exception:
+        parsed_end_at = _parse_dt(raw_end_at)
+        if parsed_end_at is None:
             return None
+        return _dt_to_utc_naive_iso(parsed_end_at)
 
     raw_end_date = (end_date or "").strip()
     if raw_end_date:
@@ -65,7 +76,7 @@ def _expected_back_deadline(end_at: str | None, end_date: str | None) -> str | N
                 tzinfo=CHICAGO_TZ,
             )
             utc_dt = local_dt.astimezone(UTC).replace(tzinfo=None)
-            return utc_dt.isoformat(timespec="seconds")
+            return _dt_to_utc_naive_iso(utc_dt)
         except Exception:
             return None
 
@@ -154,22 +165,27 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
 
 
 def delete_expired_passes_for_shelter(shelter: str) -> int:
-    now_iso = utcnow_iso()
+    now_dt = _parse_dt(utcnow_iso())
+    if now_dt is None:
+        return 0
 
-    expired_rows = db_fetchall(
+    rows = db_fetchall(
         """
-        SELECT id
+        SELECT id, delete_after_at
         FROM resident_passes
         WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
           AND delete_after_at IS NOT NULL
-          AND delete_after_at <= %s
         """,
-        (shelter, now_iso),
+        (shelter,),
     )
 
     deleted_count = 0
 
-    for row in expired_rows:
+    for row in rows:
+        delete_after_dt = _parse_dt(row.get("delete_after_at"))
+        if delete_after_dt is None or delete_after_dt > now_dt:
+            continue
+
         pass_id = int(row["id"])
 
         db_execute("DELETE FROM resident_notifications WHERE related_pass_id = %s", (pass_id,))
