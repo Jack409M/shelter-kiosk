@@ -149,6 +149,11 @@ def admin_resolve_system_alert(alert_id: int):
 def admin_system_health_events():
     return system_health_events_api()
 
+@admin.route("/staff/admin/system-health/sms-log", methods=["GET"])
+@require_login
+@require_shelter
+def admin_sms_log():
+    return sms_log_view()
 
 @admin.route("/staff/admin/system-health/data-quality", methods=["GET"])
 @require_login
