@@ -76,6 +76,22 @@ def _with_intake_action(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return updated_rows
 
 
+def _with_missing_family_fix(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    updated_rows: list[dict[str, Any]] = []
+
+    for row in rows:
+        updated_row = dict(row)
+        enrollment_id = updated_row.get("enrollment_id")
+        if enrollment_id:
+            updated_row["action_post_url"] = (
+                f"/staff/admin/system-health/data-quality/fix/missing-family/{enrollment_id}"
+            )
+            updated_row["action_post_label"] = "Create family baseline"
+        updated_rows.append(updated_row)
+
+    return updated_rows
+
+
 def _orphan_enrollments_issue() -> dict[str, Any]:
     count = _count(
         """
@@ -212,6 +228,7 @@ def _missing_family_baseline_issue() -> dict[str, Any]:
         """
     )
     rows = _with_intake_action(rows)
+    rows = _with_missing_family_fix(rows)
 
     return _issue(
         key="missing_family_baseline",
@@ -220,7 +237,7 @@ def _missing_family_baseline_issue() -> dict[str, Any]:
         severity="error",
         count=count,
         rows=rows,
-        fix_note="Open intake edit and save a complete baseline. Do not infer family counts from reports.",
+        fix_note="Create a blank family baseline, then open intake edit to complete family details.",
     )
 
 
