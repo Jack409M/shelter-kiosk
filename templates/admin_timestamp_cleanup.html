@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Timestamp Data Cleanup</h1>
+  <p>Normalize all timestamp fields to a consistent format. Run preview first.</p>
+</div>
+
+<div class="card" style="padding:20px; max-width:600px;">
+
+  <button id="preview-btn" class="control-btn warn">Preview Cleanup</button>
+  <button id="apply-btn" class="control-btn danger">Apply Cleanup</button>
+
+  <div id="result" style="margin-top:15px;"></div>
+
+</div>
+
+<script>
+async function runCleanup(apply) {
+  const resultEl = document.getElementById("result");
+  resultEl.innerText = apply ? "Applying..." : "Running preview...";
+
+  const formData = new FormData();
+  if (apply) formData.append("apply", "1");
+
+  const res = await fetch("/staff/admin/timestamp-cleanup", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    resultEl.innerText = "Failed";
+    return;
+  }
+
+  resultEl.innerText =
+    (apply ? "APPLIED" : "PREVIEW") +
+    " | Scanned: " + data.scanned +
+    " | Would Update: " + data.would_update +
+    " | Updated: " + data.updated;
+}
+
+document.getElementById("preview-btn").onclick = () => runCleanup(false);
+
+document.getElementById("apply-btn").onclick = () => {
+  if (!confirm("This will modify database data. Continue?")) return;
+  runCleanup(true);
+};
+</script>
+
+{% endblock %}
