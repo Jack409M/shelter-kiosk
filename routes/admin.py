@@ -52,6 +52,7 @@ from routes.admin_parts.system import (
     clear_demo_data_view,
     seed_demo_data_view,
 )
+from routes.admin_parts.timestamp_cleanup import run_timestamp_cleanup
 from routes.admin_parts.users import (
     admin_add_user_view,
     admin_edit_user_view,
@@ -134,18 +135,18 @@ def admin_system_health_data_quality():
     return system_health_data_quality_view()
 
 
+@admin.post("/staff/admin/timestamp-cleanup")
+@require_login
+@require_shelter
+def admin_timestamp_cleanup():
+    return run_timestamp_cleanup()
+
+
 @admin.route("/staff/admin/system-health/data-quality/duplicate-names/review", methods=["GET"])
 @require_login
 @require_shelter
 def duplicate_name_group_review():
     return duplicate_name_group_review_view()
-
-
-@admin.route("/staff/admin/system-health/data-quality/merge-review", methods=["GET"])
-@require_login
-@require_shelter
-def duplicate_merge_review_queue():
-    return duplicate_merge_review_queue_view()
 
 
 @admin.route(
