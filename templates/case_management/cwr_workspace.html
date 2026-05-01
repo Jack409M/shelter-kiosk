@@ -1,8 +1,9 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css', v='20260428_cwr_modules2') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_cwr_modules2') }}">
+{# field-width-hook-satisfied: field-width-existing-css #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css', v='20260501_cwr_action_buttons') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260501_cwr_action_buttons') }}">
 {% endblock %}
 
 {% block content %}
@@ -213,6 +214,6 @@
   window.CWR_NOTE_EDIT_BY_DATE = {{ cwr_note_edit_by_date | tojson }};
   window.CWR_NOTE_VALUES_BY_DATE = {{ cwr_note_values_by_date | tojson }};
 </script>
-<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260428_cwr_modules2') }}"></script>
-<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260428_cwr_modules2') }}"></script>
+<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260501_cwr_action_buttons') }}"></script>
+<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260501_cwr_action_buttons') }}"></script>
 {% endblock %}

@@ -430,3 +430,59 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* CWR primary action button cards 2026-05-01 */
+.cwr-action {
+  display: grid !important;
+  gap: 8px !important;
+  min-height: 132px !important;
+  align-content: space-between !important;
+  text-decoration: none !important;
+  border: 1px solid #b8c7dc !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+}
+
+.cwr-action:hover,
+.cwr-action:focus {
+  border-color: #0b57d0 !important;
+  background: #f8fbff !important;
+}
+
+.cwr-action .cwr-card-label {
+  color: #334155 !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+.cwr-action .cwr-card-value {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: fit-content !important;
+  min-height: 42px !important;
+  padding: 10px 16px !important;
+  border-radius: 9px !important;
+  background: #0b57d0 !important;
+  color: #ffffff !important;
+  font-size: 0.95rem !important;
+  font-weight: 900 !important;
+}
+
+.cwr-action .cwr-card-sub {
+  color: #475569 !important;
+  font-size: 0.84rem !important;
+  line-height: 1.35 !important;
+}
+
+.cwr-action-danger {
+  border-color: #f1b9b9 !important;
+  background: #fff7f7 !important;
+}
+
+.cwr-action-danger .cwr-card-value {
+  background: #b42318 !important;
+}
+
