@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Any, Callable
 
@@ -12,6 +13,7 @@ from core.alert_escalation import (
 from core.db import db_fetchone
 
 LogDeliveryFn = Callable[..., None]
+DEFAULT_ESCALATION_COOLDOWN_MINUTES = 10
 
 
 def _safe_text(value: Any, max_length: int = 480) -> str:
@@ -24,6 +26,20 @@ def _safe_text(value: Any, max_length: int = 480) -> str:
 def _recent_failure_cutoff() -> str:
     window_minutes = escalation_failure_window_minutes()
     cutoff = datetime.now(UTC) - timedelta(minutes=window_minutes)
+    return cutoff.isoformat(timespec="seconds")
+
+
+def _cooldown_minutes() -> int:
+    raw_value = str(os.environ.get("ALERT_ESCALATION_COOLDOWN_MINUTES") or DEFAULT_ESCALATION_COOLDOWN_MINUTES).strip()
+    try:
+        minutes = int(raw_value)
+    except Exception:
+        minutes = DEFAULT_ESCALATION_COOLDOWN_MINUTES
+    return max(1, min(minutes, 1440))
+
+
+def _cooldown_cutoff() -> str:
+    cutoff = datetime.now(UTC) - timedelta(minutes=_cooldown_minutes())
     return cutoff.isoformat(timespec="seconds")
 
 
@@ -82,6 +98,43 @@ def escalation_is_acknowledged(alert_key: str) -> bool:
     return bool(_safe_text(acknowledged_at, 120))
 
 
+def escalation_recently_sent(alert_key: str, level: str) -> bool:
+    cleaned_key = _safe_text(alert_key, 240)
+    cleaned_level = _safe_text(level, 80)
+    if not cleaned_key or not cleaned_level:
+        return False
+
+    try:
+        row = db_fetchone(
+            """
+            SELECT COUNT(1) AS recent_count
+            FROM system_alert_delivery_logs
+            WHERE alert_key = %s
+              AND channel = %s
+              AND delivery_status = %s
+              AND metadata LIKE %s
+              AND created_at >= %s
+            """,
+            (
+                cleaned_key,
+                "escalation",
+                "success",
+                f'%"level": "{cleaned_level}"%',
+                _cooldown_cutoff(),
+            ),
+        )
+    except Exception:
+        return False
+
+    if not row:
+        return False
+
+    if isinstance(row, dict):
+        return int(row.get("recent_count") or 0) > 0
+
+    return int(row[0] or 0) > 0
+
+
 def _send_sms_escalation(recipient: str, message: str) -> bool:
     try:
         from core.sms_sender import send_sms
@@ -132,6 +185,20 @@ def handle_alert_escalation(
     if not level:
         return
 
+    if escalation_recently_sent(alert_key, level):
+        log_delivery(
+            channel="escalation",
+            status="suppressed",
+            alert=alert,
+            message=f"Alert escalation {level} suppressed because it is inside the cooldown window.",
+            metadata={
+                "failure_count": failure_count,
+                "level": level,
+                "cooldown_minutes": _cooldown_minutes(),
+            },
+        )
+        return
+
     targets = build_escalation_targets(level)
     if not targets:
         log_delivery(
@@ -169,5 +236,6 @@ def handle_alert_escalation(
             "target_count": len(targets),
             "sent_count": sent_count,
             "failed_count": failed_count,
+            "cooldown_minutes": _cooldown_minutes(),
         },
     )
