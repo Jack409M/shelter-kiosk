@@ -52,7 +52,10 @@ from routes.admin_parts.system import (
     clear_demo_data_view,
     seed_demo_data_view,
 )
-from routes.admin_parts.timestamp_cleanup import run_timestamp_cleanup
+from routes.admin_parts.timestamp_cleanup import (
+    run_timestamp_cleanup,
+    timestamp_cleanup_page_view,
+)
 from routes.admin_parts.users import (
     admin_add_user_view,
     admin_edit_user_view,
@@ -91,6 +94,20 @@ def admin_role_permissions():
 @require_shelter
 def admin_system_health():
     return system_health_dashboard_view()
+
+
+@admin.route("/staff/admin/timestamp-cleanup", methods=["GET"])
+@require_login
+@require_shelter
+def admin_timestamp_cleanup_page():
+    return timestamp_cleanup_page_view()
+
+
+@admin.post("/staff/admin/timestamp-cleanup")
+@require_login
+@require_shelter
+def admin_timestamp_cleanup():
+    return run_timestamp_cleanup()
 
 
 @admin.post("/staff/admin/test-alert")
@@ -133,13 +150,6 @@ def admin_system_health_events():
 @require_shelter
 def admin_system_health_data_quality():
     return system_health_data_quality_view()
-
-
-@admin.post("/staff/admin/timestamp-cleanup")
-@require_login
-@require_shelter
-def admin_timestamp_cleanup():
-    return run_timestamp_cleanup()
 
 
 @admin.route("/staff/admin/system-health/data-quality/duplicate-names/review", methods=["GET"])
