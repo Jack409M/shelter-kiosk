@@ -73,7 +73,7 @@ def fmt_pretty_date(value) -> str:
 
 
 def utcnow_iso() -> str:
-    return datetime.now(UTC).isoformat()
+    return datetime.now(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def is_postgres() -> bool:
