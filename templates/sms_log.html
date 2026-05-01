@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">SMS Log</h1>
+  <p class="page-subtitle">Recent outbound SMS attempts, including sent, skipped, and failed messages.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:16px;">
+  <a href="/staff/admin/system-health">Back to System Health</a>
+</div>
+
+<div class="card">
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Time</th>
+          <th>Status</th>
+          <th>Phone</th>
+          <th>Raw Phone</th>
+          <th>Reason</th>
+          <th>Consent Enforced</th>
+          <th>Twilio SID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.id }}</td>
+          <td>{{ row.created_at }}</td>
+          <td>{{ row.status }}</td>
+          <td>{{ row.to_number_e164 or "" }}</td>
+          <td>{{ row.to_number_raw or "" }}</td>
+          <td>{{ row.reason or "" }}</td>
+          <td>{{ row.enforce_consent }}</td>
+          <td>{{ row.twilio_sid or "" }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">No SMS attempts have been logged yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
