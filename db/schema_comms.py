@@ -46,6 +46,39 @@ def ensure_twilio_message_status_table(kind: str) -> None:
     )
 
 
+def ensure_sms_attempt_log_table(kind: str) -> None:
+    """
+    Ensure outbound SMS attempts are logged.
+    """
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS sms_attempt_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            to_number_raw TEXT,
+            to_number_e164 TEXT,
+            status TEXT NOT NULL,
+            reason TEXT,
+            twilio_sid TEXT,
+            enforce_consent INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS sms_attempt_log (
+            id SERIAL PRIMARY KEY,
+            to_number_raw TEXT,
+            to_number_e164 TEXT,
+            status TEXT NOT NULL,
+            reason TEXT,
+            twilio_sid TEXT,
+            enforce_consent BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+        """,
+    )
+
+
 def ensure_rate_limit_events_table(kind: str) -> None:
     """
     Ensure rate_limit_events table exists on Postgres.
@@ -69,6 +102,7 @@ def ensure_tables(kind: str) -> None:
     Ensure all communications related tables exist.
     """
     ensure_twilio_message_status_table(kind)
+    ensure_sms_attempt_log_table(kind)
     ensure_rate_limit_events_table(kind)
 
 
@@ -86,6 +120,18 @@ def ensure_indexes(kind: str) -> None:
         db_execute(
             "CREATE INDEX IF NOT EXISTS twilio_message_status_created_idx "
             "ON twilio_message_status (created_at)"
+        )
+
+    with contextlib.suppress(Exception):
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS sms_attempt_log_created_idx "
+            "ON sms_attempt_log (created_at)"
+        )
+
+    with contextlib.suppress(Exception):
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS sms_attempt_log_status_idx "
+            "ON sms_attempt_log (status)"
         )
 
     if kind == "pg":
