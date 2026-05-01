@@ -253,6 +253,10 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Send Test Alert</button>
       </form>
+      <form method="POST" action="/staff/admin/system-health/break-test" style="margin:0;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" style="background:#a7372f; color:#fff;">Run Break Test</button>
+      </form>
     </div>
   </section>
 
