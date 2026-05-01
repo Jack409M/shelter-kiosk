@@ -1,53 +1,284 @@
 {% extends "layout.html" %}
 
-{% block content %}
+{% block page_header %}
 <div class="page-header">
-  <h1>Timestamp Data Cleanup</h1>
-  <p>Normalize all timestamp fields to a consistent format. Run preview first.</p>
+  <h1 class="page-title">Timestamp Data Cleanup</h1>
+  <p class="page-subtitle">
+    Normalize stored timestamp values to the standard UTC format used by the application.
+  </p>
 </div>
+{% endblock %}
 
-<div class="card" style="padding:20px; max-width:600px;">
+{% block content %}
+<style>
+  .cleanup-wrap {
+    max-width: 920px;
+    margin: 0 auto;
+  }
 
-  <button id="preview-btn" class="control-btn warn">Preview Cleanup</button>
-  <button id="apply-btn" class="control-btn danger">Apply Cleanup</button>
+  .cleanup-card {
+    border: 1px solid #d7e1ea;
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 22px;
+    box-shadow: 0 10px 22px rgba(18, 38, 63, 0.07);
+    margin-bottom: 16px;
+  }
 
-  <div id="result" style="margin-top:15px;"></div>
+  .cleanup-card h2 {
+    margin: 0 0 8px;
+    color: #1f3550;
+    font-size: 22px;
+  }
 
+  .cleanup-card p {
+    margin: 0 0 12px;
+    color: #60758a;
+    line-height: 1.5;
+  }
+
+  .cleanup-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .cleanup-button {
+    border: 1px solid #c7d3df;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1f3550;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .cleanup-button.warn {
+    background: #fff6df;
+    color: #9a6600;
+    border-color: #f0d38b;
+  }
+
+  .cleanup-button.danger {
+    background: #fdeceb;
+    color: #a7372f;
+    border-color: #f0c7c3;
+  }
+
+  .cleanup-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .cleanup-result {
+    margin-top: 16px;
+    border: 1px solid #d7e1ea;
+    border-radius: 14px;
+    background: #f7fbff;
+    padding: 14px;
+    color: #1f3550;
+    white-space: pre-wrap;
+    min-height: 56px;
+  }
+
+  .cleanup-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .cleanup-stat {
+    border: 1px solid #d7e1ea;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 12px;
+  }
+
+  .cleanup-stat strong {
+    display: block;
+    color: #1f3550;
+    font-size: 24px;
+  }
+
+  .cleanup-stat span {
+    display: block;
+    margin-top: 4px;
+    color: #60758a;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .cleanup-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+  }
+
+  .cleanup-table th,
+  .cleanup-table td {
+    border-bottom: 1px solid #e3ebf2;
+    padding: 8px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .cleanup-table th {
+    color: #60758a;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 900px) {
+    .cleanup-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>
+
+<div class="cleanup-wrap">
+  <section class="cleanup-card">
+    <h2>Cleanup Control</h2>
+    <p>
+      This tool scans timestamp like text fields and normalizes parseable values to this format:
+      <strong>YYYY-MM-DDTHH:MM:SS</strong>.
+    </p>
+    <p>
+      Preview does not write changes. Apply writes the cleanup after confirmation.
+    </p>
+
+    <div class="cleanup-actions">
+      <button type="button" id="preview-btn" class="cleanup-button warn">Preview Cleanup</button>
+      <button type="button" id="apply-btn" class="cleanup-button danger">Apply Cleanup</button>
+      <a class="cleanup-button" href="/staff/admin/system-health">Back to System Health</a>
+    </div>
+
+    <div id="cleanup-result" class="cleanup-result">No cleanup has been run yet.</div>
+  </section>
+
+  <section class="cleanup-card" id="summary-card" style="display:none;">
+    <h2>Cleanup Summary</h2>
+    <div class="cleanup-grid">
+      <div class="cleanup-stat"><strong id="stat-columns">0</strong><span>Columns</span></div>
+      <div class="cleanup-stat"><strong id="stat-scanned">0</strong><span>Scanned</span></div>
+      <div class="cleanup-stat"><strong id="stat-would-update">0</strong><span>Would Update</span></div>
+      <div class="cleanup-stat"><strong id="stat-updated">0</strong><span>Updated</span></div>
+    </div>
+  </section>
+
+  <section class="cleanup-card" id="details-card" style="display:none;">
+    <h2>Columns With Activity</h2>
+    <div style="overflow-x:auto;">
+      <table class="cleanup-table">
+        <thead>
+          <tr>
+            <th>Table</th>
+            <th>Column</th>
+            <th>Scanned</th>
+            <th>Would Update</th>
+            <th>Updated</th>
+            <th>Skipped</th>
+          </tr>
+        </thead>
+        <tbody id="details-body"></tbody>
+      </table>
+    </div>
+  </section>
 </div>
 
 <script>
-async function runCleanup(apply) {
-  const resultEl = document.getElementById("result");
-  resultEl.innerText = apply ? "Applying..." : "Running preview...";
+(function () {
+  const previewBtn = document.getElementById("preview-btn");
+  const applyBtn = document.getElementById("apply-btn");
+  const resultEl = document.getElementById("cleanup-result");
+  const summaryCard = document.getElementById("summary-card");
+  const detailsCard = document.getElementById("details-card");
+  const detailsBody = document.getElementById("details-body");
 
-  const formData = new FormData();
-  if (apply) formData.append("apply", "1");
-
-  const res = await fetch("/staff/admin/timestamp-cleanup", {
-    method: "POST",
-    body: formData
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    resultEl.innerText = "Failed";
-    return;
+  function setBusy(isBusy) {
+    previewBtn.disabled = isBusy;
+    applyBtn.disabled = isBusy;
   }
 
-  resultEl.innerText =
-    (apply ? "APPLIED" : "PREVIEW") +
-    " | Scanned: " + data.scanned +
-    " | Would Update: " + data.would_update +
-    " | Updated: " + data.updated;
-}
+  function renderResult(data, applied) {
+    summaryCard.style.display = "block";
+    detailsCard.style.display = "block";
 
-document.getElementById("preview-btn").onclick = () => runCleanup(false);
+    document.getElementById("stat-columns").innerText = data.columns_discovered || 0;
+    document.getElementById("stat-scanned").innerText = data.scanned || 0;
+    document.getElementById("stat-would-update").innerText = data.would_update || 0;
+    document.getElementById("stat-updated").innerText = data.updated || 0;
 
-document.getElementById("apply-btn").onclick = () => {
-  if (!confirm("This will modify database data. Continue?")) return;
-  runCleanup(true);
-};
+    resultEl.innerText = applied
+      ? "Cleanup applied successfully."
+      : "Preview complete. No database changes were written.";
+
+    const rows = (data.details || []).filter(function (row) {
+      return (row.would_update || row.updated || row.skipped);
+    });
+
+    if (!rows.length) {
+      detailsBody.innerHTML = '<tr><td colspan="6">No timestamp changes were found.</td></tr>';
+      return;
+    }
+
+    detailsBody.innerHTML = rows.map(function (row) {
+      return '<tr>' +
+        '<td>' + row.table_name + '</td>' +
+        '<td>' + row.column_name + '</td>' +
+        '<td>' + (row.scanned || 0) + '</td>' +
+        '<td>' + (row.would_update || 0) + '</td>' +
+        '<td>' + (row.updated || 0) + '</td>' +
+        '<td>' + (row.skipped || 0) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  async function runCleanup(applied) {
+    setBusy(true);
+    resultEl.innerText = applied ? "Applying cleanup..." : "Running preview...";
+
+    const formData = new FormData();
+    if (applied) {
+      formData.append("apply", "1");
+    }
+
+    try {
+      const response = await fetch("/staff/admin/timestamp-cleanup", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        resultEl.innerText = "Cleanup failed.";
+        return;
+      }
+
+      renderResult(data, applied);
+    } catch (error) {
+      resultEl.innerText = "Cleanup failed before the server returned a result.";
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  previewBtn.addEventListener("click", function () {
+    runCleanup(false);
+  });
+
+  applyBtn.addEventListener("click", function () {
+    const confirmed = window.confirm("This will modify database timestamp values. Run Preview first. Continue with Apply?");
+    if (!confirmed) {
+      return;
+    }
+    runCleanup(true);
+  });
+})();
 </script>
-
 {% endblock %}
