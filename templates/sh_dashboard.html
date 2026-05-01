@@ -246,6 +246,7 @@
     <div class="health-actions">
       <a href="{{ url_for('admin.admin_role_permissions') }}">Role Permission Matrix</a>
       <a href="{{ url_for('admin.admin_security_config_history') }}">Security Config History</a>
+      <a href="{{ url_for('admin.admin_timestamp_cleanup_page') }}">Timestamp Cleanup</a>
       <form method="POST" action="{{ url_for('admin.admin_test_alert') }}" style="margin:0;">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Send Test Alert</button>
