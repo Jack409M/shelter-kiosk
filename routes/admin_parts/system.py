@@ -124,6 +124,44 @@ def admin_test_alert_view():
     return redirect(url_for("admin.admin_system_health"))
 
 
+def admin_break_test_view():
+    denied = _require_standard_admin_access()
+    if denied is not None:
+        return denied
+
+    if request.method != "POST":
+        abort(405)
+
+    staff_user_id = _staff_user_id()
+    alert_key = f"break_test:manual:critical:staff:{staff_user_id or 'unknown'}"
+
+    created = create_system_alert(
+        alert_type="break_test",
+        severity="critical",
+        title="Break Test Triggered",
+        message="Manual break test initiated from System Health. This is a controlled test alert and does not break the app.",
+        source_module="admin_break_test",
+        alert_key=alert_key,
+        metadata=f"triggered_by_staff_user_id={staff_user_id or ''}",
+    )
+
+    log_action(
+        "admin",
+        None,
+        None,
+        staff_user_id,
+        "break_test_triggered",
+        {"created": created, "alert_key": alert_key},
+    )
+
+    if created:
+        flash("Break test alert triggered. Check Active Alerts, delivery history, and escalation log.", "success")
+    else:
+        flash("A matching break test alert is already open. Resolve it before running another.", "warning")
+
+    return redirect(url_for("admin.admin_system_health"))
+
+
 def admin_demo_data_view():
     denied = _require_dangerous_admin_access()
     if denied is not None:
