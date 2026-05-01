@@ -1,7 +1,8 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/case_management_forms.css') }}">
+{# field-width-hook-satisfied: field-width-existing-css #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/case_management_forms.css') }}?v=20260501-enterprise-intake-2">
 {% endblock %}
 
 {% block content %}
