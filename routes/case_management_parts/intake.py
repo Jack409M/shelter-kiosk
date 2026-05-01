@@ -255,6 +255,78 @@ def _apply_selected_need_flags(
     return form_data
 
 
+def _preserve_existing_update_values(
+    *,
+    resident: dict[str, Any],
+    enrollment: dict[str, Any],
+    data: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Protect update requests from partial form submissions.
+
+    The intake edit screen normally posts a full form. If a browser, template change,
+    or future partial-update endpoint omits optional fields, validation will normalize
+    those missing values to None or derived zero values. This merge preserves existing
+    persisted values for omitted fields so partial updates cannot silently erase data.
+    """
+    existing_data, selected_need_keys = intake_edit_form_data(
+        resident=resident,
+        enrollment=enrollment,
+    )
+    existing_data = _apply_intake_edit_aliases(existing_data)
+    existing_data = _normalize_yes_no_fields(existing_data)
+    existing_data = _apply_selected_need_flags(existing_data, selected_need_keys)
+
+    merged = dict(data)
+
+    for key, existing_value in existing_data.items():
+        if key not in merged:
+            merged[key] = existing_value
+            continue
+
+        if merged.get(key) is None and existing_value not in (None, ""):
+            merged[key] = existing_value
+
+    income_fields = (
+        "employment_income_1",
+        "employment_income_2",
+        "employment_income_3",
+        "ssi_ssdi_income",
+        "tanf_income",
+        "child_support_income",
+        "alimony_income",
+        "other_income",
+    )
+    income_was_not_submitted = not any(field_name in request.form for field_name in income_fields)
+    if income_was_not_submitted and existing_data.get("income_at_entry") not in (None, ""):
+        merged["income_at_entry"] = existing_data.get("income_at_entry")
+        for field_name in income_fields:
+            if existing_data.get(field_name) not in (None, ""):
+                merged[field_name] = existing_data.get(field_name)
+
+    family_fields = (
+        "kids_at_dwc",
+        "kids_served_outside_under_18",
+        "kids_ages_0_5",
+        "kids_ages_6_11",
+        "kids_ages_12_17",
+        "kids_reunited_while_in_program",
+        "healthy_babies_born_at_dwc",
+    )
+    family_was_not_submitted = not any(field_name in request.form for field_name in family_fields)
+    if family_was_not_submitted:
+        for field_name in family_fields:
+            if existing_data.get(field_name) not in (None, ""):
+                merged[field_name] = existing_data.get(field_name)
+
+    needs_were_not_submitted = "entry_need" not in request.form
+    if needs_were_not_submitted and selected_need_keys:
+        merged["entry_need_keys"] = selected_need_keys
+        merged = _apply_selected_need_flags(merged, selected_need_keys)
+
+    return merged
+
+
 def _find_duplicate_for_data(*, data: dict[str, Any], current_shelter: str):
     return _find_possible_duplicate(
         first_name=data["first_name"],
@@ -366,12 +438,17 @@ def _handle_update(
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     enrollment_id = int(enrollment["id"])
+    protected_data = _preserve_existing_update_values(
+        resident=dict(resident),
+        enrollment=dict(enrollment),
+        data=data,
+    )
 
     try:
         update_intake(
             resident_id=resident_id,
             enrollment_id=enrollment_id,
-            data=data,
+            data=protected_data,
         )
     except LookupError:
         flash("No intake assessment found for update.", "error")
