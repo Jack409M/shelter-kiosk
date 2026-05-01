@@ -670,3 +670,54 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Intake polish overrides 2026-05-01 */
+.stage-card {
+  display: grid !important;
+  grid-template-columns: 46px minmax(0, 1fr) !important;
+  grid-template-areas:
+    "icon title"
+    "icon text" !important;
+  align-items: start !important;
+  column-gap: 18px !important;
+  row-gap: 4px !important;
+  min-height: auto !important;
+}
+
+.stage-card:before {
+  grid-area: icon !important;
+  margin-top: 0 !important;
+}
+
+.stage-card h2 {
+  grid-area: title !important;
+  margin: 0 !important;
+}
+
+.stage-card p {
+  grid-area: text !important;
+  margin: 0 !important;
+  max-width: 980px !important;
+  white-space: normal !important;
+}
+
+.section-card-body {
+  padding-top: 18px !important;
+  padding-bottom: 22px !important;
+}
+
+.field-grid {
+  gap: 16px 34px !important;
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: 40px !important;
+}
+
+.field small,
+.toggle-field small {
+  max-width: 260px !important;
+}
+
