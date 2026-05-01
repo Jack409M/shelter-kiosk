@@ -44,6 +44,16 @@ def _current_staff_user_id() -> int | None:
         return None
 
 
+def _staff_user_display_sql(alias: str) -> str:
+    return f"""
+        COALESCE(
+            NULLIF(TRIM(COALESCE({alias}.first_name, '') || ' ' || COALESCE({alias}.last_name, '')), ''),
+            NULLIF({alias}.username, ''),
+            CASE WHEN {alias}.id IS NOT NULL THEN 'User ' || {alias}.id ELSE '' END
+        )
+    """
+
+
 def _open_alert_exists(alert_key: str) -> bool:
     row = db_fetchone(
         """
@@ -185,35 +195,39 @@ def sync_system_health_alerts(cards: list[dict[str, Any]]) -> int:
 
 def load_open_system_alerts(limit: int = 25) -> list[dict[str, Any]]:
     safe_limit = max(1, min(int(limit or 25), 100))
+    acknowledged_by_display_sql = _staff_user_display_sql("ack_user")
     return db_fetchall(
-        """
+        f"""
         SELECT
-            id,
-            alert_key,
-            alert_type,
-            severity,
-            status,
-            title,
-            message,
-            source_module,
-            entity_type,
-            entity_id,
-            metadata,
-            acknowledged_by_user_id,
-            acknowledged_at,
-            acknowledgement_note,
-            created_at,
-            updated_at
+            system_alerts.id,
+            system_alerts.alert_key,
+            system_alerts.alert_type,
+            system_alerts.severity,
+            system_alerts.status,
+            system_alerts.title,
+            system_alerts.message,
+            system_alerts.source_module,
+            system_alerts.entity_type,
+            system_alerts.entity_id,
+            system_alerts.metadata,
+            system_alerts.acknowledged_by_user_id,
+            {acknowledged_by_display_sql} AS acknowledged_by_display,
+            system_alerts.acknowledged_at,
+            system_alerts.acknowledgement_note,
+            system_alerts.created_at,
+            system_alerts.updated_at
         FROM system_alerts
-        WHERE status = %s
+        LEFT JOIN staff_users AS ack_user
+          ON ack_user.id = system_alerts.acknowledged_by_user_id
+        WHERE system_alerts.status = %s
         ORDER BY
-            CASE severity
+            CASE system_alerts.severity
                 WHEN 'critical' THEN 1
                 WHEN 'error' THEN 2
                 WHEN 'warn' THEN 3
                 ELSE 4
             END,
-            id DESC
+            system_alerts.id DESC
         LIMIT %s
         """,
         ("open", safe_limit),
@@ -222,30 +236,38 @@ def load_open_system_alerts(limit: int = 25) -> list[dict[str, Any]]:
 
 def load_recent_system_alerts(limit: int = 50) -> list[dict[str, Any]]:
     safe_limit = max(1, min(int(limit or 50), 100))
+    acknowledged_by_display_sql = _staff_user_display_sql("ack_user")
+    resolved_by_display_sql = _staff_user_display_sql("res_user")
     return db_fetchall(
-        """
+        f"""
         SELECT
-            id,
-            alert_key,
-            alert_type,
-            severity,
-            status,
-            title,
-            message,
-            source_module,
-            entity_type,
-            entity_id,
-            metadata,
-            acknowledged_by_user_id,
-            acknowledged_at,
-            acknowledgement_note,
-            resolved_by_user_id,
-            resolved_at,
-            resolution_note,
-            created_at,
-            updated_at
+            system_alerts.id,
+            system_alerts.alert_key,
+            system_alerts.alert_type,
+            system_alerts.severity,
+            system_alerts.status,
+            system_alerts.title,
+            system_alerts.message,
+            system_alerts.source_module,
+            system_alerts.entity_type,
+            system_alerts.entity_id,
+            system_alerts.metadata,
+            system_alerts.acknowledged_by_user_id,
+            {acknowledged_by_display_sql} AS acknowledged_by_display,
+            system_alerts.acknowledged_at,
+            system_alerts.acknowledgement_note,
+            system_alerts.resolved_by_user_id,
+            {resolved_by_display_sql} AS resolved_by_display,
+            system_alerts.resolved_at,
+            system_alerts.resolution_note,
+            system_alerts.created_at,
+            system_alerts.updated_at
         FROM system_alerts
-        ORDER BY id DESC
+        LEFT JOIN staff_users AS ack_user
+          ON ack_user.id = system_alerts.acknowledged_by_user_id
+        LEFT JOIN staff_users AS res_user
+          ON res_user.id = system_alerts.resolved_by_user_id
+        ORDER BY system_alerts.id DESC
         LIMIT %s
         """,
         (safe_limit,),
