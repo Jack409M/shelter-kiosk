@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.admin_rbac import require_admin_role
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
@@ -11,6 +12,28 @@ from routes.case_management_parts.helpers import placeholder
 _ACTIVE_RESIDENT_SQL = """
 COALESCE(LOWER(TRIM(CAST(is_active AS TEXT))), '') IN ('1', 'true', 't', 'yes')
 """
+
+_RESIDENT_ID_COVERAGE_TABLES = {
+    "children": "resident_children",
+    "child_supports": "resident_child_income_supports",
+    "passes": "resident_passes",
+    "notifications": "resident_notifications",
+    "writeups": "resident_writeups",
+    "rent_configs": "resident_rent_configs",
+    "rent_sheet_entries": "resident_rent_sheet_entries",
+    "rent_ledger": "resident_rent_ledger_entries",
+    "budget_sessions": "resident_budget_sessions",
+    "ua_logs": "resident_ua_logs",
+    "goals": "goals",
+}
+
+_ENROLLMENT_ID_COVERAGE_TABLES = {
+    "enrollments": "program_enrollments",
+    "intake_assessments": "intake_assessments",
+    "family_snapshots": "family_snapshots",
+    "exit_assessments": "exit_assessments",
+    "followups": "followups",
+}
 
 
 def _staff_user_id() -> int | None:
@@ -29,6 +52,74 @@ def _duplicate_keys_from_request() -> tuple[str, str] | None:
         return None
 
     return first_name_key, last_name_key
+
+
+def _safe_count(sql: str, params: tuple[Any, ...]) -> int:
+    try:
+        row = db_fetchone(sql, params) or {}
+        return int(row.get("count") or 0)
+    except Exception:
+        current_app.logger.info("merge_coverage_count_skipped", exc_info=True)
+        return 0
+
+
+def _resident_table_count(table_name: str, resident_id: int) -> int:
+    ph = placeholder()
+    return _safe_count(
+        f"SELECT COUNT(*) AS count FROM {table_name} WHERE resident_id = {ph}",
+        (resident_id,),
+    )
+
+
+def _enrollment_table_count(table_name: str, resident_id: int) -> int:
+    ph = placeholder()
+
+    if table_name == "program_enrollments":
+        return _safe_count(
+            f"SELECT COUNT(*) AS count FROM program_enrollments WHERE resident_id = {ph}",
+            (resident_id,),
+        )
+
+    return _safe_count(
+        f"""
+        SELECT COUNT(*) AS count
+        FROM {table_name} t
+        JOIN program_enrollments pe ON pe.id = t.enrollment_id
+        WHERE pe.resident_id = {ph}
+        """,
+        (resident_id,),
+    )
+
+
+def _merge_coverage_snapshot(resident_id: int) -> dict[str, Any]:
+    resident_counts = {
+        label: _resident_table_count(table_name, resident_id)
+        for label, table_name in _RESIDENT_ID_COVERAGE_TABLES.items()
+    }
+    enrollment_counts = {
+        label: _enrollment_table_count(table_name, resident_id)
+        for label, table_name in _ENROLLMENT_ID_COVERAGE_TABLES.items()
+    }
+
+    merge_currently_moves = {
+        "children",
+        "child_supports",
+        "passes",
+        "notifications",
+    }
+
+    not_currently_moved = [
+        label
+        for label, count in {**resident_counts, **enrollment_counts}.items()
+        if count and label not in merge_currently_moves
+    ]
+
+    return {
+        "resident_counts": resident_counts,
+        "enrollment_counts": enrollment_counts,
+        "not_currently_moved": not_currently_moved,
+        "warning_count": len(not_currently_moved),
+    }
 
 
 def _active_match_count(first_name_key: str, last_name_key: str) -> int:
@@ -238,8 +329,11 @@ def duplicate_merge_resident_snapshot_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("admin.duplicate_merge_review_queue"))
 
+    coverage = _merge_coverage_snapshot(resident_id)
+
     return render_template(
         "duplicate_merge_resident_snapshot.html",
         title="Resident Merge Snapshot",
         resident=resident,
+        coverage=coverage,
     )
