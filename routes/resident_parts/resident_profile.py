@@ -1,8 +1,9 @@
 from flask import flash, redirect, render_template, request, url_for, session
 
 from core.db import db_execute, db_fetchone
-from core.helpers import utcnow_iso
 from core.field_change_logger import log_field_change
+from core.helpers import utcnow_iso
+from core.phone_numbers import normalize_optional_phone_10, phone_has_value
 from routes.case_management_parts.helpers import placeholder
 
 
@@ -36,7 +37,16 @@ def edit_resident_profile_view(resident_id: int):
         old_phone = resident.get("phone")
         old_birth_year = resident.get("birth_year")
 
-        phone = (request.form.get("phone") or "").strip()
+        phone_raw = request.form.get("phone")
+        phone = normalize_optional_phone_10(phone_raw)
+        if phone_has_value(phone_raw) and not phone:
+            flash("Phone must be exactly 10 digits.", "error")
+            return render_template(
+                "resident_profile_edit.html",
+                resident=resident,
+                next=next_url,
+            )
+
         birth_year = request.form.get("birth_year")
 
         db_execute(
