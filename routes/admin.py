@@ -135,7 +135,7 @@ def admin_acknowledge_system_alert(alert_id: int):
 @require_login
 @require_shelter
 def admin_resolve_system_alert(alert_id: int):
-    return resolve_system_health_alert_view(alert_id)
+    return resolve_system_alert_view(alert_id)
 
 
 @admin.route("/staff/admin/system-health/events", methods=["GET"])
@@ -157,6 +157,13 @@ def admin_system_health_data_quality():
 @require_shelter
 def duplicate_name_group_review():
     return duplicate_name_group_review_view()
+
+
+@admin.route("/staff/admin/system-health/data-quality/merge-review", methods=["GET"])
+@require_login
+@require_shelter
+def duplicate_merge_review_queue():
+    return duplicate_merge_review_queue_view()
 
 
 @admin.route(
