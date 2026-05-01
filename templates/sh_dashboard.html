@@ -288,7 +288,12 @@
       <p>{{ alert.message }}</p>
       <p class="health-meta">
         Created: {{ alert.created_at }}
-        {% if alert.acknowledged_at %} · Acknowledged: {{ alert.acknowledged_at }}{% endif %}
+{% if alert.acknowledged_at %}
+  · Acknowledged: {{ alert.acknowledged_at }}
+  {% if alert.acknowledged_by_display %}
+    · By {{ alert.acknowledged_by_display }}
+  {% endif %}
+{% endif %}
       </p>
       <div class="health-alert-actions">
         {% if not alert.acknowledged_at %}
