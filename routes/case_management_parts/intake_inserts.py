@@ -42,6 +42,96 @@ def _nullable_flag(value: int | None) -> int | None:
     return None if value is None else int(value)
 
 
+def _normalized_text(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _assert_resident_ready_for_enrollment(resident_id: int, shelter: str) -> None:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT id, shelter, is_active
+        FROM residents
+        WHERE id = {ph}
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+    if not row:
+        raise RuntimeError(
+            f"Cross table integrity failed: resident {resident_id} does not exist."
+        )
+
+    if _normalized_text(row.get("shelter")) != _normalized_text(shelter):
+        raise RuntimeError(
+            "Cross table integrity failed: resident shelter does not match enrollment shelter."
+        )
+
+
+def _assert_enrollment_ready_for_child_rows(enrollment_id: int) -> None:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT
+            e.id AS enrollment_id,
+            e.resident_id AS enrollment_resident_id,
+            e.shelter AS enrollment_shelter,
+            r.id AS resident_id,
+            r.shelter AS resident_shelter
+        FROM program_enrollments e
+        LEFT JOIN residents r ON r.id = e.resident_id
+        WHERE e.id = {ph}
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    if not row:
+        raise RuntimeError(
+            f"Cross table integrity failed: enrollment {enrollment_id} does not exist."
+        )
+
+    if not row.get("resident_id"):
+        raise RuntimeError(
+            "Cross table integrity failed: enrollment is not linked to an existing resident."
+        )
+
+    if int(row["resident_id"]) != int(row["enrollment_resident_id"]):
+        raise RuntimeError(
+            "Cross table integrity failed: enrollment resident id mismatch."
+        )
+
+    if _normalized_text(row.get("resident_shelter")) != _normalized_text(
+        row.get("enrollment_shelter")
+    ):
+        raise RuntimeError(
+            "Cross table integrity failed: resident shelter and enrollment shelter do not match."
+        )
+
+
+def _assert_no_existing_baseline_row(table_name: str, enrollment_id: int) -> None:
+    allowed_tables = {"intake_assessments", "family_snapshots"}
+    if table_name not in allowed_tables:
+        raise RuntimeError(f"Unsafe baseline integrity table: {table_name}")
+
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT id
+        FROM {table_name}
+        WHERE enrollment_id = {ph}
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    if row:
+        raise RuntimeError(
+            f"Cross table integrity failed: {table_name} already exists for enrollment {enrollment_id}."
+        )
+
+
 def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "city": data.get("city"),
@@ -255,6 +345,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
 
 def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> int:
     ph = placeholder()
+    _assert_resident_ready_for_enrollment(resident_id, shelter)
 
     if g.get("db_kind") == "pg":
         row = db_fetchone(
@@ -323,6 +414,8 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     ph = placeholder()
     now = utcnow_iso()
     payload = _build_intake_assessment_payload(data)
+    _assert_enrollment_ready_for_child_rows(enrollment_id)
+    _assert_no_existing_baseline_row("intake_assessments", enrollment_id)
 
     if g.get("db_kind") == "pg":
         db_execute(
@@ -641,6 +734,8 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
     ph = placeholder()
     now = utcnow_iso()
     payload = _build_family_snapshot_payload(data)
+    _assert_enrollment_ready_for_child_rows(enrollment_id)
+    _assert_no_existing_baseline_row("family_snapshots", enrollment_id)
 
     db_execute(
         f"""
