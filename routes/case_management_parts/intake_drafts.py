@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from flask import g, session, current_app
+from flask import current_app, g, session
 
 from core.db import db_execute, db_fetchone
 from routes.case_management_parts.helpers import clean, draft_display_name, placeholder
@@ -189,6 +189,32 @@ def _save_intake_draft(
     return int(row["id"])
 
 
+def _mark_intake_draft_corrupted(draft_id: int) -> None:
+    ph = placeholder()
+
+    if g.get("db_kind") == "pg":
+        db_execute(
+            f"""
+            UPDATE intake_drafts
+            SET status = 'corrupted',
+                updated_at = NOW()
+            WHERE id = {ph}
+            """,
+            (draft_id,),
+        )
+        return
+
+    db_execute(
+        f"""
+        UPDATE intake_drafts
+        SET status = 'corrupted',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = {ph}
+        """,
+        (draft_id,),
+    )
+
+
 def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | None:
     ph = placeholder()
     row = db_fetchone(
@@ -227,7 +253,18 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
             draft_id_value,
             current_shelter,
         )
-        payload = {}
+        _mark_intake_draft_corrupted(int(draft_id_value))
+        return None
+
+    if not isinstance(payload, dict):
+        current_app.logger.error(
+            "Invalid intake draft payload type detected draft_id=%s shelter=%s payload_type=%s",
+            draft_id_value,
+            current_shelter,
+            type(payload).__name__,
+        )
+        _mark_intake_draft_corrupted(int(draft_id_value))
+        return None
 
     payload["draft_id"] = str(draft_id_value)
     payload["draft_status"] = draft_status or "draft"
