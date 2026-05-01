@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 
 from core.admin_rbac import require_admin_role
-from core.db import db_fetchone
+from core.db import db_fetchall, db_fetchone
 from core.enterprise_readiness import (
     build_enterprise_readiness_cards,
     sync_enterprise_readiness_alerts,
@@ -383,6 +383,35 @@ def resolve_system_health_alert_view(alert_id: int):
         flash("System alert was not found.", "error")
 
     return redirect(url_for("admin.admin_system_health"))
+
+
+def sms_log_view():
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    rows = db_fetchall(
+        """
+        SELECT
+            id,
+            to_number_raw,
+            to_number_e164,
+            status,
+            reason,
+            twilio_sid,
+            enforce_consent,
+            created_at
+        FROM sms_attempt_log
+        ORDER BY id DESC
+        LIMIT 100
+        """
+    )
+
+    return render_template(
+        "sms_log.html",
+        title="SMS Log",
+        rows=rows or [],
+    )
 
 
 def system_health_dashboard_view():
