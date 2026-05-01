@@ -9,6 +9,7 @@ from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.pass_retention import run_pass_retention_cleanup_for_shelter
+from routes.admin_parts.sh_data_quality import _load_data_quality_issues
 from routes.case_management_parts.helpers import current_enrollment_order_sql
 
 case_dashboard = Blueprint(
@@ -88,6 +89,55 @@ def _row_value(row, key: str, index: int):
     if isinstance(row, dict):
         return row.get(key)
     return row[index]
+
+
+def _row_matches_shelter(row: dict, shelter: str | None) -> bool:
+    if not shelter:
+        return True
+
+    target = str(shelter or "").strip().lower()
+    row_shelter_values = (
+        row.get("shelter"),
+        row.get("resident_shelter"),
+        row.get("enrollment_shelter"),
+    )
+
+    return any(str(value or "").strip().lower() == target for value in row_shelter_values)
+
+
+def _load_data_issue_summary(shelter: str | None) -> dict:
+    issues = _load_data_quality_issues()
+    resident_ids: set[int] = set()
+    issue_count = 0
+    error_count = 0
+    warning_count = 0
+
+    for issue in issues:
+        matching_rows = [
+            row for row in issue.get("rows", []) if _row_matches_shelter(row, shelter)
+        ]
+        matching_count = len(matching_rows)
+        issue_count += matching_count
+
+        if issue.get("severity") == "error":
+            error_count += matching_count
+        elif issue.get("severity") == "warn":
+            warning_count += matching_count
+
+        for row in matching_rows:
+            resident_id = row.get("id")
+            if resident_id:
+                try:
+                    resident_ids.add(int(resident_id))
+                except (TypeError, ValueError):
+                    continue
+
+    return {
+        "resident_count": len(resident_ids),
+        "issue_count": issue_count,
+        "error_count": error_count,
+        "warning_count": warning_count,
+    }
 
 
 @case_dashboard.route("")
@@ -306,6 +356,7 @@ def dashboard():
         else 0
     )
     family_intakes_pending_count = len(family_intakes_pending_rows)
+    data_issue_summary = _load_data_issue_summary(str(shelter or ""))
 
     now_chicago = datetime.now(CHICAGO_TZ)
     today_local = now_chicago.date()
@@ -781,6 +832,7 @@ def dashboard():
         pending_transport_count=pending_transport_count,
         intake_drafts_count=intake_drafts_count,
         family_intakes_pending_count=family_intakes_pending_count,
+        data_issue_summary=data_issue_summary,
         missed_clock_in_rows=missed_clock_in_rows,
         late_check_in_rows=late_check_in_rows,
         appointments_today=appointments_today,
