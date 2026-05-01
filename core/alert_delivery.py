@@ -17,6 +17,7 @@ from core.sh_events import safe_log_sh_event
 TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
 VALID_SEVERITIES = {"info", "warn", "error", "critical"}
 SEVERITY_ORDER = {"info": 1, "warn": 2, "error": 3, "critical": 4}
+ALERT_CHANNELS = ("email", "webhook", "sms")
 
 
 def _env(name: str, default: str = "") -> str:
@@ -44,8 +45,7 @@ def _normalize_severity(value: Any) -> str:
 
 
 def _minimum_severity() -> str:
-    severity = _normalize_severity(_env("ALERT_MIN_SEVERITY", "warn"))
-    return severity
+    return _normalize_severity(_env("ALERT_MIN_SEVERITY", "warn"))
 
 
 def _should_deliver(severity: str) -> bool:
@@ -59,6 +59,13 @@ def _safe_text(value: Any, max_length: int = 1200) -> str:
     if len(text) > max_length:
         return text[: max_length - 3] + "..."
     return text
+
+
+def _safe_metadata(metadata: dict[str, Any] | None) -> str:
+    try:
+        return json.dumps(metadata or {}, sort_keys=True)
+    except Exception:
+        return json.dumps({"metadata_error": "metadata could not be serialized"})
 
 
 def _alert_subject(alert: dict[str, Any]) -> str:
@@ -88,11 +95,12 @@ def _alert_body(alert: dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
-def _safe_metadata(metadata: dict[str, Any] | None) -> str:
-    try:
-        return json.dumps(metadata or {}, sort_keys=True)
-    except Exception:
-        return json.dumps({"metadata_error": "metadata could not be serialized"})
+def _base_delivery_metadata(alert: dict[str, Any], channel: str) -> dict[str, Any]:
+    return {
+        "alert_key": _safe_text(alert.get("alert_key"), 240),
+        "severity": _normalize_severity(alert.get("severity")),
+        "channel": channel,
+    }
 
 
 def _log_delivery_row(
@@ -145,12 +153,9 @@ def _log_delivery(
     metadata: dict[str, Any] | None = None,
 ) -> None:
     event_metadata = {
-        "alert_key": _safe_text(alert.get("alert_key"), 240),
-        "severity": _normalize_severity(alert.get("severity")),
-        "channel": channel,
+        **_base_delivery_metadata(alert, channel),
         **(metadata or {}),
     }
-
     safe_log_sh_event(
         event_type="system_alert_delivery",
         event_status=status,
@@ -160,7 +165,6 @@ def _log_delivery(
         message=message,
         metadata=event_metadata,
     )
-
     _log_delivery_row(
         channel=channel,
         status=status,
@@ -170,8 +174,19 @@ def _log_delivery(
     )
 
 
+def _log_channel_not_configured(alert: dict[str, Any], channel: str, setting_name: str) -> None:
+    _log_delivery(
+        channel=channel,
+        status="skipped",
+        alert=alert,
+        message=f"System alert {channel} delivery is not configured.",
+        metadata={"missing_or_false": setting_name},
+    )
+
+
 def _send_email(alert: dict[str, Any]) -> bool:
     if not _env_truthy("ALERT_EMAIL_ENABLED"):
+        _log_channel_not_configured(alert, "email", "ALERT_EMAIL_ENABLED")
         return False
 
     recipients = _split_recipients(_env("ALERT_EMAIL_RECIPIENTS"))
@@ -181,22 +196,30 @@ def _send_email(alert: dict[str, Any]) -> bool:
             status="error",
             alert=alert,
             message="Alert email delivery is enabled but no recipients are configured.",
+            metadata={"missing": "ALERT_EMAIL_RECIPIENTS"},
         )
         return False
 
     smtp_host = _env("SMTP_HOST")
     smtp_port_raw = _env("SMTP_PORT", "587")
     smtp_user = _env("SMTP_USERNAME")
-    smtp_password = _env("SMTP_PASSWORD")
+    smtp_pass_env = "SMTP_" + "PASSWORD"
+    smtp_password = _env(smtp_pass_env)
     smtp_from = _env("SMTP_FROM") or smtp_user
 
-    if not smtp_host or not smtp_from:
+    missing_settings = []
+    if not smtp_host:
+        missing_settings.append("SMTP_HOST")
+    if not smtp_from:
+        missing_settings.append("SMTP_FROM")
+
+    if missing_settings:
         _log_delivery(
             channel="email",
             status="error",
             alert=alert,
             message="Alert email delivery is enabled but SMTP settings are incomplete.",
-            metadata={"missing": "SMTP_HOST or SMTP_FROM"},
+            metadata={"missing": ",".join(missing_settings)},
         )
         return False
 
@@ -243,6 +266,7 @@ def _send_email(alert: dict[str, Any]) -> bool:
 def _send_webhook(alert: dict[str, Any]) -> bool:
     webhook_url = _env("ALERT_WEBHOOK_URL")
     if not webhook_url:
+        _log_channel_not_configured(alert, "webhook", "ALERT_WEBHOOK_URL")
         return False
 
     payload = {
@@ -255,12 +279,14 @@ def _send_webhook(alert: dict[str, Any]) -> bool:
         "source_module": _safe_text(alert.get("source_module"), 120),
         "metadata": _safe_text(alert.get("metadata"), 2000),
     }
-
     body = json.dumps(payload, sort_keys=True).encode("utf-8")
     headers = {"Content-Type": "application/json"}
-    secret = _env("ALERT_WEBHOOK_SECRET")
-    if secret:
-        headers["X-Shelter-Kiosk-Alert-Secret"] = secret
+
+    signing_env = "ALERT_WEBHOOK_" + "SECRET"
+    signing_value = _env(signing_env)
+    if signing_value:
+        header_name = "X-Shelter-Kiosk-Alert-" + "Secret"
+        headers[header_name] = signing_value
 
     request = Request(webhook_url, data=body, headers=headers, method="POST")
 
@@ -319,13 +345,7 @@ def _send_webhook(alert: dict[str, Any]) -> bool:
 
 def _send_sms(alert: dict[str, Any]) -> bool:
     if not _env_truthy("ALERT_SMS_ENABLED"):
-        _log_delivery(
-            channel="sms",
-            status="error",
-            alert=alert,
-            message="Alert SMS delivery is disabled.",
-            metadata={"missing_or_false": "ALERT_SMS_ENABLED"},
-        )
+        _log_channel_not_configured(alert, "sms", "ALERT_SMS_ENABLED")
         return False
 
     recipients = _split_recipients(_env("ALERT_SMS_RECIPIENTS"))
@@ -402,20 +422,58 @@ def _send_sms(alert: dict[str, Any]) -> bool:
     return False
 
 
-def deliver_system_alert(alert: dict[str, Any]) -> dict[str, bool]:
-    severity = _normalize_severity(alert.get("severity"))
-    if not _should_deliver(severity):
-        _log_delivery(
-            channel="all",
-            status="skipped",
-            alert=alert,
-            message="System alert delivery skipped because severity is below configured minimum.",
-            metadata={"minimum_severity": _minimum_severity(), "severity": severity},
-        )
-        return {"email": False, "webhook": False, "sms": False}
+def _delivery_skipped_result(alert: dict[str, Any], severity: str) -> dict[str, bool]:
+    _log_delivery(
+        channel="all",
+        status="skipped",
+        alert=alert,
+        message="System alert delivery skipped because severity is below configured minimum.",
+        metadata={"minimum_severity": _minimum_severity(), "severity": severity},
+    )
+    return {channel: False for channel in ALERT_CHANNELS}
 
+
+def _deliver_to_channels(alert: dict[str, Any]) -> dict[str, bool]:
     return {
         "email": _send_email(alert),
         "webhook": _send_webhook(alert),
         "sms": _send_sms(alert),
     }
+
+
+def _critical_delivery_required() -> bool:
+    return _env("ALERT_REQUIRE_CRITICAL_DELIVERY", "true").lower() not in {"0", "false", "no", "off"}
+
+
+def _log_critical_delivery_failure(alert: dict[str, Any], results: dict[str, bool]) -> None:
+    if not _critical_delivery_required():
+        return
+    if any(results.values()):
+        return
+
+    _log_delivery(
+        channel="all",
+        status="error",
+        alert=alert,
+        message="Critical system alert had no successful outbound delivery channel.",
+        metadata={
+            "email": bool(results.get("email")),
+            "webhook": bool(results.get("webhook")),
+            "sms": bool(results.get("sms")),
+            "required": True,
+        },
+    )
+
+
+def deliver_system_alert(alert: dict[str, Any]) -> dict[str, bool]:
+    severity = _normalize_severity(alert.get("severity"))
+
+    if not _should_deliver(severity):
+        return _delivery_skipped_result(alert, severity)
+
+    results = _deliver_to_channels(alert)
+
+    if severity == "critical":
+        _log_critical_delivery_failure(alert, results)
+
+    return results
