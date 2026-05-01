@@ -31,7 +31,7 @@ def ensure_intake_assessments_table(kind: str) -> None:
             drug_of_choice TEXT,
             ace_score INTEGER,
             grit_score INTEGER,
-            veteran INTEGER NOT NULL DEFAULT 0,
+            veteran INTEGER DEFAULT 0,
             disability TEXT,
             marital_status TEXT,
             notes_basic TEXT,
@@ -40,28 +40,28 @@ def ensure_intake_assessments_table(kind: str) -> None:
             trauma_notes TEXT,
             barrier_notes TEXT,
             place_staying_before_entry TEXT,
-            entry_felony_conviction INTEGER NOT NULL DEFAULT 0,
-            entry_parole_probation INTEGER NOT NULL DEFAULT 0,
-            drug_court INTEGER NOT NULL DEFAULT 0,
-            sexual_survivor INTEGER NOT NULL DEFAULT 0,
-            dv_survivor INTEGER NOT NULL DEFAULT 0,
-            human_trafficking_survivor INTEGER NOT NULL DEFAULT 0,
-            warrants_unpaid INTEGER NOT NULL DEFAULT 0,
-            mh_exam_completed INTEGER NOT NULL DEFAULT 0,
-            med_exam_completed INTEGER NOT NULL DEFAULT 0,
-            car_at_entry INTEGER NOT NULL DEFAULT 0,
-            car_insurance_at_entry INTEGER NOT NULL DEFAULT 0,
-            pregnant_at_entry INTEGER NOT NULL DEFAULT 0,
-            dental_need_at_entry INTEGER NOT NULL DEFAULT 0,
-            vision_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            entry_felony_conviction INTEGER DEFAULT 0,
+            entry_parole_probation INTEGER DEFAULT 0,
+            drug_court INTEGER DEFAULT 0,
+            sexual_survivor INTEGER DEFAULT 0,
+            dv_survivor INTEGER DEFAULT 0,
+            human_trafficking_survivor INTEGER DEFAULT 0,
+            warrants_unpaid INTEGER DEFAULT 0,
+            mh_exam_completed INTEGER DEFAULT 0,
+            med_exam_completed INTEGER DEFAULT 0,
+            car_at_entry INTEGER DEFAULT 0,
+            car_insurance_at_entry INTEGER DEFAULT 0,
+            pregnant_at_entry INTEGER DEFAULT 0,
+            dental_need_at_entry INTEGER DEFAULT 0,
+            vision_need_at_entry INTEGER DEFAULT 0,
             employment_status_at_entry TEXT,
-            mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0,
-            medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
-            substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            mental_health_need_at_entry INTEGER DEFAULT 0,
+            medical_need_at_entry INTEGER DEFAULT 0,
+            substance_use_need_at_entry INTEGER DEFAULT 0,
             id_documents_status_at_entry TEXT,
-            has_drivers_license INTEGER NOT NULL DEFAULT 0,
-            has_social_security_card INTEGER NOT NULL DEFAULT 0,
-            parenting_class_needed INTEGER NOT NULL DEFAULT 0,
+            has_drivers_license INTEGER DEFAULT 0,
+            has_social_security_card INTEGER DEFAULT 0,
+            parenting_class_needed INTEGER DEFAULT 0,
             dwc_level_today TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
@@ -84,7 +84,7 @@ def ensure_intake_assessments_table(kind: str) -> None:
             drug_of_choice TEXT,
             ace_score INTEGER,
             grit_score INTEGER,
-            veteran INTEGER NOT NULL DEFAULT 0,
+            veteran INTEGER DEFAULT 0,
             disability TEXT,
             marital_status TEXT,
             notes_basic TEXT,
@@ -93,28 +93,28 @@ def ensure_intake_assessments_table(kind: str) -> None:
             trauma_notes TEXT,
             barrier_notes TEXT,
             place_staying_before_entry TEXT,
-            entry_felony_conviction INTEGER NOT NULL DEFAULT 0,
-            entry_parole_probation INTEGER NOT NULL DEFAULT 0,
-            drug_court INTEGER NOT NULL DEFAULT 0,
-            sexual_survivor INTEGER NOT NULL DEFAULT 0,
-            dv_survivor INTEGER NOT NULL DEFAULT 0,
-            human_trafficking_survivor INTEGER NOT NULL DEFAULT 0,
-            warrants_unpaid INTEGER NOT NULL DEFAULT 0,
-            mh_exam_completed INTEGER NOT NULL DEFAULT 0,
-            med_exam_completed INTEGER NOT NULL DEFAULT 0,
-            car_at_entry INTEGER NOT NULL DEFAULT 0,
-            car_insurance_at_entry INTEGER NOT NULL DEFAULT 0,
-            pregnant_at_entry INTEGER NOT NULL DEFAULT 0,
-            dental_need_at_entry INTEGER NOT NULL DEFAULT 0,
-            vision_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            entry_felony_conviction INTEGER DEFAULT 0,
+            entry_parole_probation INTEGER DEFAULT 0,
+            drug_court INTEGER DEFAULT 0,
+            sexual_survivor INTEGER DEFAULT 0,
+            dv_survivor INTEGER DEFAULT 0,
+            human_trafficking_survivor INTEGER DEFAULT 0,
+            warrants_unpaid INTEGER DEFAULT 0,
+            mh_exam_completed INTEGER DEFAULT 0,
+            med_exam_completed INTEGER DEFAULT 0,
+            car_at_entry INTEGER DEFAULT 0,
+            car_insurance_at_entry INTEGER DEFAULT 0,
+            pregnant_at_entry INTEGER DEFAULT 0,
+            dental_need_at_entry INTEGER DEFAULT 0,
+            vision_need_at_entry INTEGER DEFAULT 0,
             employment_status_at_entry TEXT,
-            mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0,
-            medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
-            substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            mental_health_need_at_entry INTEGER DEFAULT 0,
+            medical_need_at_entry INTEGER DEFAULT 0,
+            substance_use_need_at_entry INTEGER DEFAULT 0,
             id_documents_status_at_entry TEXT,
-            has_drivers_license INTEGER NOT NULL DEFAULT 0,
-            has_social_security_card INTEGER NOT NULL DEFAULT 0,
-            parenting_class_needed INTEGER NOT NULL DEFAULT 0,
+            has_drivers_license INTEGER DEFAULT 0,
+            has_social_security_card INTEGER DEFAULT 0,
+            parenting_class_needed INTEGER DEFAULT 0,
             dwc_level_today TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -151,6 +151,62 @@ def _ensure_intake_disability_is_text(kind: str) -> None:
         )
 
 
+def _drop_not_null_constraints(kind: str, table_name: str, column_names: list[str]) -> None:
+    if kind != "pg":
+        return
+
+    from core.db import db_execute
+
+    for column_name in column_names:
+        with contextlib.suppress(Exception):
+            db_execute(
+                f"ALTER TABLE {table_name} ALTER COLUMN {column_name} DROP NOT NULL"
+            )
+
+
+def _ensure_nullable_unknown_baseline_columns(kind: str) -> None:
+    _drop_not_null_constraints(
+        kind,
+        "intake_assessments",
+        [
+            "veteran",
+            "entry_felony_conviction",
+            "entry_parole_probation",
+            "drug_court",
+            "sexual_survivor",
+            "dv_survivor",
+            "human_trafficking_survivor",
+            "warrants_unpaid",
+            "mh_exam_completed",
+            "med_exam_completed",
+            "car_at_entry",
+            "car_insurance_at_entry",
+            "pregnant_at_entry",
+            "dental_need_at_entry",
+            "vision_need_at_entry",
+            "mental_health_need_at_entry",
+            "medical_need_at_entry",
+            "substance_use_need_at_entry",
+            "has_drivers_license",
+            "has_social_security_card",
+            "parenting_class_needed",
+        ],
+    )
+    _drop_not_null_constraints(
+        kind,
+        "family_snapshots",
+        [
+            "kids_at_dwc",
+            "kids_served_outside_under_18",
+            "kids_ages_0_5",
+            "kids_ages_6_11",
+            "kids_ages_12_17",
+            "kids_reunited_while_in_program",
+            "healthy_babies_born_at_dwc",
+        ],
+    )
+
+
 def ensure_intake_assessment_columns(kind: str) -> None:
     with contextlib.suppress(Exception):
         _ensure_intake_disability_is_text(kind)
@@ -168,30 +224,32 @@ def ensure_intake_assessment_columns(kind: str) -> None:
         "trauma_notes TEXT",
         "barrier_notes TEXT",
         "treatment_grad_date TEXT",
-        "drug_court INTEGER NOT NULL DEFAULT 0",
-        "sexual_survivor INTEGER NOT NULL DEFAULT 0",
-        "warrants_unpaid INTEGER NOT NULL DEFAULT 0",
-        "mh_exam_completed INTEGER NOT NULL DEFAULT 0",
-        "med_exam_completed INTEGER NOT NULL DEFAULT 0",
-        "car_at_entry INTEGER NOT NULL DEFAULT 0",
-        "car_insurance_at_entry INTEGER NOT NULL DEFAULT 0",
-        "pregnant_at_entry INTEGER NOT NULL DEFAULT 0",
-        "dental_need_at_entry INTEGER NOT NULL DEFAULT 0",
-        "vision_need_at_entry INTEGER NOT NULL DEFAULT 0",
+        "drug_court INTEGER DEFAULT 0",
+        "sexual_survivor INTEGER DEFAULT 0",
+        "warrants_unpaid INTEGER DEFAULT 0",
+        "mh_exam_completed INTEGER DEFAULT 0",
+        "med_exam_completed INTEGER DEFAULT 0",
+        "car_at_entry INTEGER DEFAULT 0",
+        "car_insurance_at_entry INTEGER DEFAULT 0",
+        "pregnant_at_entry INTEGER DEFAULT 0",
+        "dental_need_at_entry INTEGER DEFAULT 0",
+        "vision_need_at_entry INTEGER DEFAULT 0",
         "employment_status_at_entry TEXT",
-        "mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0",
-        "medical_need_at_entry INTEGER NOT NULL DEFAULT 0",
-        "substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0",
+        "mental_health_need_at_entry INTEGER DEFAULT 0",
+        "medical_need_at_entry INTEGER DEFAULT 0",
+        "substance_use_need_at_entry INTEGER DEFAULT 0",
         "id_documents_status_at_entry TEXT",
-        "has_drivers_license INTEGER NOT NULL DEFAULT 0",
-        "has_social_security_card INTEGER NOT NULL DEFAULT 0",
-        "parenting_class_needed INTEGER NOT NULL DEFAULT 0",
+        "has_drivers_license INTEGER DEFAULT 0",
+        "has_social_security_card INTEGER DEFAULT 0",
+        "parenting_class_needed INTEGER DEFAULT 0",
         "dwc_level_today TEXT",
     ]
 
     for column_sql in columns:
         with contextlib.suppress(Exception):
             safe_add_column(kind, "intake_assessments", column_sql)
+
+    _ensure_nullable_unknown_baseline_columns(kind)
 
 
 def ensure_family_snapshots_table(kind: str) -> None:
@@ -201,13 +259,13 @@ def ensure_family_snapshots_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS family_snapshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             enrollment_id INTEGER NOT NULL,
-            kids_at_dwc INTEGER NOT NULL DEFAULT 0,
-            kids_served_outside_under_18 INTEGER NOT NULL DEFAULT 0,
-            kids_ages_0_5 INTEGER NOT NULL DEFAULT 0,
-            kids_ages_6_11 INTEGER NOT NULL DEFAULT 0,
-            kids_ages_12_17 INTEGER NOT NULL DEFAULT 0,
-            kids_reunited_while_in_program INTEGER NOT NULL DEFAULT 0,
-            healthy_babies_born_at_dwc INTEGER NOT NULL DEFAULT 0,
+            kids_at_dwc INTEGER DEFAULT 0,
+            kids_served_outside_under_18 INTEGER DEFAULT 0,
+            kids_ages_0_5 INTEGER DEFAULT 0,
+            kids_ages_6_11 INTEGER DEFAULT 0,
+            kids_ages_12_17 INTEGER DEFAULT 0,
+            kids_reunited_while_in_program INTEGER DEFAULT 0,
+            healthy_babies_born_at_dwc INTEGER DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
@@ -217,18 +275,19 @@ def ensure_family_snapshots_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS family_snapshots (
             id SERIAL PRIMARY KEY,
             enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
-            kids_at_dwc INTEGER NOT NULL DEFAULT 0,
-            kids_served_outside_under_18 INTEGER NOT NULL DEFAULT 0,
-            kids_ages_0_5 INTEGER NOT NULL DEFAULT 0,
-            kids_ages_6_11 INTEGER NOT NULL DEFAULT 0,
-            kids_ages_12_17 INTEGER NOT NULL DEFAULT 0,
-            kids_reunited_while_in_program INTEGER NOT NULL DEFAULT 0,
-            healthy_babies_born_at_dwc INTEGER NOT NULL DEFAULT 0,
+            kids_at_dwc INTEGER DEFAULT 0,
+            kids_served_outside_under_18 INTEGER DEFAULT 0,
+            kids_ages_0_5 INTEGER DEFAULT 0,
+            kids_ages_6_11 INTEGER DEFAULT 0,
+            kids_ages_12_17 INTEGER DEFAULT 0,
+            kids_reunited_while_in_program INTEGER DEFAULT 0,
+            healthy_babies_born_at_dwc INTEGER DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """,
     )
+    _ensure_nullable_unknown_baseline_columns(kind)
 
 
 def ensure_exit_assessments_table(kind: str) -> None:
