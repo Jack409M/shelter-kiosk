@@ -8,6 +8,7 @@ from flask import has_request_context, session
 
 from core.audit import log_action
 from core.db import db_execute, db_fetchone, db_transaction
+from core.field_change_logger import log_field_change
 from routes.case_management_parts.helpers import (
     assert_enrollment_belongs_to_resident,
     fetch_current_enrollment_for_resident,
@@ -58,6 +59,83 @@ class IntakeCreateResult:
 class IntakeUpdateResult:
     resident_id: int
     enrollment_id: int
+
+
+RESIDENT_UPDATE_AUDIT_FIELDS: tuple[str, ...] = (
+    "first_name",
+    "last_name",
+    "birth_year",
+    "phone",
+    "email",
+    "emergency_contact_name",
+    "emergency_contact_relationship",
+    "emergency_contact_phone",
+    "gender",
+    "race",
+    "ethnicity",
+)
+
+ENROLLMENT_UPDATE_AUDIT_FIELDS: tuple[str, ...] = (
+    "entry_date",
+    "program_status",
+)
+
+INTAKE_UPDATE_AUDIT_FIELDS: tuple[str, ...] = (
+    "city",
+    "county",
+    "last_zipcode_residence",
+    "length_of_time_in_amarillo",
+    "income_at_entry",
+    "education_at_entry",
+    "treatment_grad_date",
+    "sobriety_date",
+    "days_sober_at_entry",
+    "drug_of_choice",
+    "ace_score",
+    "grit_score",
+    "veteran",
+    "disability",
+    "marital_status",
+    "notes_basic",
+    "entry_notes",
+    "initial_snapshot_notes",
+    "trauma_notes",
+    "barrier_notes",
+    "place_staying_before_entry",
+    "entry_felony_conviction",
+    "entry_parole_probation",
+    "drug_court",
+    "sexual_survivor",
+    "dv_survivor",
+    "human_trafficking_survivor",
+    "warrants_unpaid",
+    "mh_exam_completed",
+    "med_exam_completed",
+    "car_at_entry",
+    "car_insurance_at_entry",
+    "pregnant_at_entry",
+    "dental_need_at_entry",
+    "vision_need_at_entry",
+    "employment_status_at_entry",
+    "mental_health_need_at_entry",
+    "medical_need_at_entry",
+    "substance_use_need_at_entry",
+    "id_documents_status_at_entry",
+    "has_drivers_license",
+    "has_social_security_card",
+    "parenting_class_needed",
+    "dwc_level_today",
+)
+
+FAMILY_UPDATE_AUDIT_FIELDS: tuple[str, ...] = (
+    "kids_at_dwc",
+    "kids_served_outside_under_18",
+    "kids_ages_0_5",
+    "kids_ages_6_11",
+    "kids_ages_12_17",
+    "kids_reunited_while_in_program",
+    "healthy_babies_born_at_dwc",
+)
 
 
 def _audit_staff_user_id() -> int | None:
@@ -313,6 +391,126 @@ def _assert_updated_intake_baseline(
     )
 
 
+def _fetch_audit_row(table_name: str, row_id: int) -> dict[str, Any]:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT *
+        FROM {table_name}
+        WHERE id = {ph}
+        LIMIT 1
+        """,
+        (row_id,),
+    )
+    return dict(row or {})
+
+
+def _fetch_family_snapshot_for_audit(enrollment_id: int) -> dict[str, Any]:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT *
+        FROM family_snapshots
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+    return dict(row or {})
+
+
+def _log_field_diff_set(
+    *,
+    entity_type: str,
+    entity_id: int | None,
+    table_name: str,
+    before: dict[str, Any],
+    after: dict[str, Any],
+    fields: tuple[str, ...],
+    changed_by_user_id: int | None,
+    shelter: str | None,
+    change_reason: str,
+) -> None:
+    for field_name in fields:
+        log_field_change(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            table_name=table_name,
+            field_name=field_name,
+            old_value=before.get(field_name),
+            new_value=after.get(field_name),
+            changed_by_user_id=changed_by_user_id,
+            shelter=shelter,
+            change_reason=change_reason,
+        )
+
+
+def _log_intake_update_diffs(
+    *,
+    resident_id: int,
+    enrollment_id: int,
+    intake_assessment_id: int,
+    before_resident: dict[str, Any],
+    before_enrollment: dict[str, Any],
+    before_intake: dict[str, Any],
+    before_family: dict[str, Any],
+    changed_by_user_id: int | None,
+    shelter: str | None,
+) -> None:
+    after_resident = _fetch_audit_row("residents", resident_id)
+    after_enrollment = _fetch_audit_row("program_enrollments", enrollment_id)
+    after_intake = _fetch_audit_row("intake_assessments", intake_assessment_id)
+    after_family = _fetch_family_snapshot_for_audit(enrollment_id)
+
+    change_reason = "intake_update"
+
+    _log_field_diff_set(
+        entity_type="resident",
+        entity_id=resident_id,
+        table_name="residents",
+        before=before_resident,
+        after=after_resident,
+        fields=RESIDENT_UPDATE_AUDIT_FIELDS,
+        changed_by_user_id=changed_by_user_id,
+        shelter=shelter,
+        change_reason=change_reason,
+    )
+    _log_field_diff_set(
+        entity_type="enrollment",
+        entity_id=enrollment_id,
+        table_name="program_enrollments",
+        before=before_enrollment,
+        after=after_enrollment,
+        fields=ENROLLMENT_UPDATE_AUDIT_FIELDS,
+        changed_by_user_id=changed_by_user_id,
+        shelter=shelter,
+        change_reason=change_reason,
+    )
+    _log_field_diff_set(
+        entity_type="intake_assessment",
+        entity_id=intake_assessment_id,
+        table_name="intake_assessments",
+        before=before_intake,
+        after=after_intake,
+        fields=INTAKE_UPDATE_AUDIT_FIELDS,
+        changed_by_user_id=changed_by_user_id,
+        shelter=shelter,
+        change_reason=change_reason,
+    )
+    _log_field_diff_set(
+        entity_type="family_snapshot",
+        entity_id=after_family.get("id") or before_family.get("id"),
+        table_name="family_snapshots",
+        before=before_family,
+        after=after_family,
+        fields=FAMILY_UPDATE_AUDIT_FIELDS,
+        changed_by_user_id=changed_by_user_id,
+        shelter=shelter,
+        change_reason=change_reason,
+    )
+
+
 def intake_edit_form_data(
     *,
     resident: dict[str, Any],
@@ -525,6 +723,9 @@ def update_intake(
         raise LookupError("No intake assessment found for update.")
 
     enrollment_shelter = enrollment_row.get("shelter") if isinstance(enrollment_row, dict) else None
+    audit_shelter = _audit_shelter(enrollment_shelter)
+    audit_staff_user_id = _audit_staff_user_id()
+
     _assert_intake_update_payload(data, enrollment_shelter)
 
     intake_assessment_id = int(existing_intake["id"])
@@ -532,6 +733,11 @@ def update_intake(
     ph = placeholder()
     intake_payload = _build_intake_assessment_payload(data)
     family_payload = _build_family_snapshot_payload(data)
+
+    before_resident = _fetch_audit_row("residents", resident_id)
+    before_enrollment = _fetch_audit_row("program_enrollments", enrollment_id)
+    before_intake = dict(existing_intake)
+    before_family = _fetch_family_snapshot_for_audit(enrollment_id)
 
     with db_transaction():
         db_execute(
@@ -741,11 +947,23 @@ def update_intake(
             enrollment_shelter=enrollment_shelter,
         )
 
+        _log_intake_update_diffs(
+            resident_id=resident_id,
+            enrollment_id=enrollment_id,
+            intake_assessment_id=intake_assessment_id,
+            before_resident=before_resident,
+            before_enrollment=before_enrollment,
+            before_intake=before_intake,
+            before_family=before_family,
+            changed_by_user_id=audit_staff_user_id,
+            shelter=audit_shelter,
+        )
+
     log_action(
         "intake",
         enrollment_id,
-        _audit_shelter(enrollment_shelter),
-        _audit_staff_user_id(),
+        audit_shelter,
+        audit_staff_user_id,
         "update",
         {
             "resident_id": resident_id,
