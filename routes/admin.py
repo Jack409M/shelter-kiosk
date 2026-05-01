@@ -198,6 +198,12 @@ def admin_duplicate_merge_execute():
 def admin_fix_missing_intake_baseline(enrollment_id: int):
     return fix_missing_intake_baseline_view(enrollment_id)
 
+@admin.post("/staff/admin/system-health/data-quality/fix/missing-family/<int:enrollment_id>")
+@require_login
+@require_shelter
+def admin_fix_missing_family_baseline(enrollment_id: int):
+    return fix_missing_family_baseline_view(enrollment_id)
+
 
 @admin.post(
     "/staff/admin/system-health/data-quality/fix/shelter-mismatch/<int:enrollment_id>/<string:target>"
