@@ -46,8 +46,10 @@ from routes.admin_parts.sh_data_quality import (
     fix_shelter_mismatch_view,
     system_health_data_quality_view,
 )
-from routes.admin_parts.data_quality_repairs import fix_missing_family_baseline_view
-
+from routes.admin_parts.data_quality_repairs import (
+    close_active_enrollment_for_inactive_resident_view,
+    fix_missing_family_baseline_view,
+)
 from routes.admin_parts.system import (
     admin_demo_data_view,
     admin_test_alert_view,
@@ -198,11 +200,19 @@ def admin_duplicate_merge_execute():
 def admin_fix_missing_intake_baseline(enrollment_id: int):
     return fix_missing_intake_baseline_view(enrollment_id)
 
+
 @admin.post("/staff/admin/system-health/data-quality/fix/missing-family/<int:enrollment_id>")
 @require_login
 @require_shelter
 def admin_fix_missing_family_baseline(enrollment_id: int):
     return fix_missing_family_baseline_view(enrollment_id)
+
+
+@admin.post("/staff/admin/system-health/data-quality/fix/close-enrollment/<int:enrollment_id>")
+@require_login
+@require_shelter
+def admin_fix_close_enrollment(enrollment_id: int):
+    return close_active_enrollment_for_inactive_resident_view(enrollment_id)
 
 
 @admin.post(
