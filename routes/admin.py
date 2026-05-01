@@ -53,6 +53,7 @@ from routes.admin_parts.data_quality_repairs import (
     fix_missing_family_baseline_view,
 )
 from routes.admin_parts.system import (
+    admin_break_test_view,
     admin_demo_data_view,
     admin_test_alert_view,
     clear_demo_data_view,
@@ -121,6 +122,13 @@ def admin_timestamp_cleanup():
 @require_shelter
 def admin_test_alert():
     return admin_test_alert_view()
+
+
+@admin.post("/staff/admin/system-health/break-test")
+@require_login
+@require_shelter
+def admin_break_test():
+    return admin_break_test_view()
 
 
 @admin.route("/staff/admin/backup-documentation", methods=["GET"])
