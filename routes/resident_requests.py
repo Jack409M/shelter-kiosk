@@ -20,6 +20,7 @@ from core.access import require_resident
 from core.audit import log_action
 from core.db import db_fetchone
 from core.helpers import utcnow_iso
+from core.phone_numbers import normalize_optional_phone_10, phone_has_value
 from core.rate_limit import is_rate_limited
 from core.residents import resident_session_start
 from core.runtime import init_db
@@ -252,12 +253,16 @@ def resident_transport():
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
     resident_notes = (request.form.get("resident_notes") or "").strip()
-    callback_phone = (request.form.get("callback_phone") or "").strip()
+    callback_phone_raw = request.form.get("callback_phone")
+    callback_phone = normalize_optional_phone_10(callback_phone_raw)
 
     errors: list[str] = []
 
     if not first_name or not last_name or not needed_raw or not pickup_location or not destination:
         errors.append("Complete all required fields.")
+
+    if phone_has_value(callback_phone_raw) and not callback_phone:
+        errors.append("Call back phone must be exactly 10 digits.")
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
@@ -284,7 +289,7 @@ def resident_transport():
         destination=destination,
         reason=reason or None,
         resident_notes=resident_notes or None,
-        callback_phone=callback_phone or None,
+        callback_phone=callback_phone,
         submitted_at=submitted_at,
     )
 
