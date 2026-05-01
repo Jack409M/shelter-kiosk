@@ -60,10 +60,12 @@ def sms_is_allowed_for_number(phone: str) -> bool:
     try:
         _init_db()
     except Exception:
+        current_app.logger.exception("SMS consent check failed during database init.")
         return False
 
     target = _normalize_us_phone_10(phone)
     if not target:
+        current_app.logger.info("SMS consent check skipped because phone could not be normalized.")
         return False
 
     try:
@@ -73,10 +75,10 @@ def sms_is_allowed_for_number(phone: str) -> bool:
             FROM residents
             WHERE phone IS NOT NULL AND phone != ''
             ORDER BY id DESC
-            LIMIT 300
             """
         )
     except Exception:
+        current_app.logger.exception("SMS consent check failed while loading residents.")
         return False
 
     for row in rows or []:
@@ -88,8 +90,14 @@ def sms_is_allowed_for_number(phone: str) -> bool:
             continue
 
         if not bool(resident_opt_in):
+            current_app.logger.info("SMS consent denied because resident is not opted in.")
             return False
 
-        return not resident_opt_out_at
+        if resident_opt_out_at:
+            current_app.logger.info("SMS consent denied because resident has opted out.")
+            return False
 
+        return True
+
+    current_app.logger.info("SMS consent denied because no matching resident phone was found.")
     return False
