@@ -139,7 +139,7 @@ def admin_acknowledge_system_alert(alert_id: int):
 @require_login
 @require_shelter
 def admin_resolve_system_alert(alert_id: int):
-    return resolve_system_alert_view(alert_id)
+    return resolve_system_health_alert_view(alert_id)
 
 
 @admin.route("/staff/admin/system-health/events", methods=["GET"])
