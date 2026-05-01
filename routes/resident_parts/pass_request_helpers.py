@@ -10,6 +10,7 @@ from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.db import db_fetchall, db_fetchone, db_transaction, get_db
 from core.helpers import utcnow_iso
 from core.pass_rules import CHICAGO_TZ, is_late_standard_pass_request
+from core.phone_numbers import normalize_optional_phone_10, phone_has_value
 
 
 @dataclass
@@ -270,6 +271,67 @@ def flash_pass_request_restriction_if_blocked(resident_id: int) -> bool:
     return True
 
 
+def _phone_list_entries(value: str) -> list[str]:
+    normalized = str(value or "").replace("\r", "\n").replace(";", "\n").replace(",", "\n")
+    return [entry.strip() for entry in normalized.splitlines() if entry.strip()]
+
+
+def _normalize_optional_phone_field(
+    value: str,
+    label: str,
+    errors: list[str],
+) -> str:
+    normalized = normalize_optional_phone_10(value)
+    if phone_has_value(value) and not normalized:
+        errors.append(f"{label} must be exactly 10 digits.")
+        return value
+    return normalized or ""
+
+
+def _normalize_optional_phone_list_field(
+    value: str,
+    label: str,
+    errors: list[str],
+) -> str:
+    entries = _phone_list_entries(value)
+    if not entries:
+        return ""
+
+    normalized_entries: list[str] = []
+    invalid_entries: list[str] = []
+
+    for entry in entries:
+        normalized = normalize_optional_phone_10(entry)
+        if normalized:
+            normalized_entries.append(normalized)
+        else:
+            invalid_entries.append(entry)
+
+    if invalid_entries:
+        errors.append(f"{label} must contain only 10 digit phone numbers.")
+        return value
+
+    return "\n".join(normalized_entries)
+
+
+def _normalize_pass_phone_fields(form: PassRequestFormData, errors: list[str]) -> None:
+    form.resident_phone = _normalize_optional_phone_field(
+        form.resident_phone,
+        "Cell phone",
+        errors,
+    )
+    form.destination_phone = _normalize_optional_phone_field(
+        form.destination_phone,
+        "Phone number there",
+        errors,
+    )
+    form.companion_phone_numbers = _normalize_optional_phone_list_field(
+        form.companion_phone_numbers,
+        "Phone numbers of people you will be with",
+        errors,
+    )
+
+
 def extract_pass_form_data(resident_phone_from_db: str) -> PassRequestFormData:
     return PassRequestFormData(
         pass_type=(request.form.get("pass_type") or "").strip().lower(),
@@ -306,6 +368,8 @@ def validate_pass_request_form(
     form: PassRequestFormData,
 ) -> PassRequestValidationResult:
     errors: list[str] = []
+
+    _normalize_pass_phone_fields(form, errors)
 
     if not context.first_name or not context.last_name or not context.shelter:
         errors.append("Resident session is incomplete. Please sign in again.")
