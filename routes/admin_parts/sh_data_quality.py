@@ -27,6 +27,8 @@ NOT EXISTS (
 )
 """
 
+DATA_QUALITY_VIEW_ROLES = {"admin", "shelter_director", "case_manager"}
+
 
 def _count(sql: str, params: tuple = ()) -> int:
     row = db_fetchone(sql, params) or {}
@@ -40,6 +42,31 @@ def _count(sql: str, params: tuple = ()) -> int:
 
 def _rows(sql: str, params: tuple = ()) -> list[dict]:
     return db_fetchall(sql, params) or []
+
+
+def _current_role() -> str:
+    return str(session.get("role") or "").strip().lower()
+
+
+def _can_view_data_quality() -> bool:
+    return _current_role() in DATA_QUALITY_VIEW_ROLES
+
+
+def _is_admin_user() -> bool:
+    return _current_role() == "admin"
+
+
+def _remove_admin_only_actions_for_non_admins(issues: list[dict]) -> list[dict]:
+    if _is_admin_user():
+        return issues
+
+    for issue in issues:
+        for row in issue.get("rows", []):
+            row.pop("action_post_url", None)
+            row.pop("action_post_label", None)
+            row.pop("action_post_actions", None)
+
+    return issues
 
 
 def _with_action(rows: list[dict], *, action_url: str, action_label: str) -> list[dict]:
@@ -724,12 +751,12 @@ def confirm_duplicate_names_separate_view():
 
 
 def system_health_data_quality_view():
-    if not require_admin_role():
-        flash("Admin only.", "error")
+    if not _can_view_data_quality():
+        flash("Access denied.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     checked_at = datetime.now(UTC).replace(microsecond=0).isoformat()
-    issues = _load_data_quality_issues()
+    issues = _remove_admin_only_actions_for_non_admins(_load_data_quality_issues())
     total_issues = sum(issue["count"] for issue in issues)
     error_count = sum(issue["count"] for issue in issues if issue["severity"] == "error")
     warning_count = sum(issue["count"] for issue in issues if issue["severity"] == "warn")
@@ -742,4 +769,5 @@ def system_health_data_quality_view():
         total_issues=total_issues,
         error_count=error_count,
         warning_count=warning_count,
+        is_admin_user=_is_admin_user(),
     )
