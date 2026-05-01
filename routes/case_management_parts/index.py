@@ -4,6 +4,7 @@ from flask import flash, g, redirect, render_template, request, session, url_for
 
 from core.db import db_fetchall
 from core.runtime import init_db
+from routes.admin_parts.sh_data_quality import _load_data_quality_issues
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
     normalize_shelter_name,
@@ -252,6 +253,38 @@ def _build_index_residents(shelter: str, show: str) -> list[dict]:
     return residents
 
 
+def _load_data_issue_summary() -> dict:
+    issues = _load_data_quality_issues()
+    resident_ids: set[int] = set()
+    total_issue_count = 0
+    error_count = 0
+    warning_count = 0
+
+    for issue in issues:
+        issue_count = int(issue.get("count") or 0)
+        total_issue_count += issue_count
+
+        if issue.get("severity") == "error":
+            error_count += issue_count
+        elif issue.get("severity") == "warn":
+            warning_count += issue_count
+
+        for row in issue.get("rows", []):
+            resident_id = row.get("id")
+            if resident_id:
+                try:
+                    resident_ids.add(int(resident_id))
+                except (TypeError, ValueError):
+                    continue
+
+    return {
+        "resident_count": len(resident_ids),
+        "issue_count": total_issue_count,
+        "error_count": error_count,
+        "warning_count": warning_count,
+    }
+
+
 def _load_intake_drafts(shelter: str):
     shelter_param = _db_placeholder()
     return db_fetchall(
@@ -330,12 +363,14 @@ def index_view():
     shelter = _current_shelter()
     show = _current_show_mode()
     residents = _build_index_residents(shelter, show)
+    data_issue_summary = _load_data_issue_summary()
 
     return render_template(
         "case_management/index.html",
         residents=residents,
         shelter=shelter,
         show=show,
+        data_issue_summary=data_issue_summary,
     )
 
 
