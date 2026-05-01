@@ -14,9 +14,37 @@
   <p><strong>Enrollment Shelter:</strong> {{ resident.enrollment_shelter }}</p>
   <p><strong>Entry Date:</strong> {{ resident.entry_date }}</p>
   <p><strong>Intake Exists:</strong> {{ resident.intake_exists }}</p>
-  <p><strong>Children:</strong> {{ resident.child_count }}</p>
-  <p><strong>Notes:</strong> {{ resident.note_count }}</p>
-  <p><strong>Passes:</strong> {{ resident.pass_count }}</p>
+</div>
+
+<h2>Data Coverage</h2>
+
+{% if coverage.warning_count > 0 %}
+<div class="card" style="border:2px solid red;">
+  <strong>Warning:</strong> This merge will NOT move all data.
+  <ul>
+    {% for item in coverage.not_currently_moved %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3>Resident Linked</h3>
+  <ul>
+    {% for key, value in coverage.resident_counts.items() %}
+      <li>{{ key }}: {{ value }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Enrollment Linked</h3>
+  <ul>
+    {% for key, value in coverage.enrollment_counts.items() %}
+      <li>{{ key }}: {{ value }}</li>
+    {% endfor %}
+  </ul>
 </div>
 
 <a href="/staff/admin/system-health/data-quality/merge-review">Back to merge review</a>
