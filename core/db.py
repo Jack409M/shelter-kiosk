@@ -9,7 +9,7 @@ from threading import Lock
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
-from flask import current_app, g
+from flask import current_app, g, has_app_context
 
 try:
     from psycopg2.extras import RealDictCursor
@@ -233,6 +233,18 @@ def _sqlite_should_skip_statement(normalized_sql: str) -> bool:
     return "pg_get_serial_sequence(" in compact_sql
 
 
+def _log_skipped_sql_execution(sql: str, params: tuple[Any, ...]) -> None:
+    if not has_app_context():
+        return
+
+    compact_sql = " ".join(str(sql or "").split())
+    current_app.logger.warning(
+        "DB execute skipped intentionally for current database adapter: sql=%s params_count=%s",
+        compact_sql[:500],
+        len(params),
+    )
+
+
 def _rewrite_legacy_sqlite_transport_insert(
     normalized_sql: str,
     params: tuple[Any, ...],
@@ -322,6 +334,7 @@ def _prepare_sql_and_params(
 def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
     prepared_sql, prepared_params = _prepare_sql_and_params(sql, params)
     if prepared_sql is None:
+        _log_skipped_sql_execution(sql, params)
         return
 
     with _db_cursor(dict_rows=False) as cur:
