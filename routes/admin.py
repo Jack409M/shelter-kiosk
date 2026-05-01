@@ -46,6 +46,8 @@ from routes.admin_parts.sh_data_quality import (
     fix_shelter_mismatch_view,
     system_health_data_quality_view,
 )
+from routes.admin_parts.data_quality_repairs import fix_missing_family_baseline_view
+
 from routes.admin_parts.system import (
     admin_demo_data_view,
     admin_test_alert_view,
