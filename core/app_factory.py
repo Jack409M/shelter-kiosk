@@ -32,6 +32,7 @@ from core.runtime import (
     init_db,
     load_runtime_config,
 )
+from core.phone_numbers import format_phone_display
 
 CSRF_EXEMPT_ENDPOINTS = {
     "resident_requests.sms_consent",
@@ -181,6 +182,8 @@ def _register_template_helpers(app: Flask) -> None:
     app.jinja_env.filters["chi_time"] = fmt_time_only
     app.jinja_env.filters["chi_pretty_date"] = fmt_pretty_date
     app.jinja_env.filters["chi_pretty_dt"] = fmt_pretty_dt
+
+    app.jinja_env.filters["phone_display"] = format_phone_display
 
 
 def _csrf_failure_redirect():
