@@ -26,6 +26,7 @@ from core.admin_rbac import (
 from core.audit import log_action
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt, utcnow_iso
+from core.phone_numbers import normalize_optional_phone_10, phone_has_value
 from core.runtime import MIN_STAFF_PASSWORD_LEN, ROLE_LABELS, init_db
 
 VALID_SHELTERS = {"abba", "haven", "gratitude"}
@@ -80,6 +81,13 @@ def _normalize_calendar_color(value: str | None) -> str | None:
     if cleaned in VALID_CALENDAR_COLORS:
         return cleaned
     return None
+
+
+def _normalize_staff_mobile_phone(value: str | None) -> tuple[str | None, str | None]:
+    normalized = normalize_optional_phone_10(value)
+    if phone_has_value(value) and not normalized:
+        return None, "Mobile Phone must be exactly 10 digits."
+    return normalized, None
 
 
 def _load_staff_shelter_assignments(staff_user_id: int) -> set[str]:
@@ -232,7 +240,8 @@ def admin_add_user_view():
         last_name = (request.form.get("last_name") or "").strip()
         username = (request.form.get("username") or "").strip()
         role = (request.form.get("role") or "").strip()
-        mobile_phone = (request.form.get("mobile_phone") or "").strip()
+        mobile_phone_raw = (request.form.get("mobile_phone") or "").strip()
+        mobile_phone, mobile_phone_error = _normalize_staff_mobile_phone(mobile_phone_raw)
         calendar_color = _normalize_calendar_color(request.form.get("calendar_color"))
         password = (request.form.get("password") or "").strip()
         selected_shelters = request.form.getlist("shelters")
@@ -242,11 +251,22 @@ def admin_add_user_view():
             "last_name": last_name,
             "username": username,
             "role": role,
-            "mobile_phone": mobile_phone,
+            "mobile_phone": mobile_phone_raw if mobile_phone_error else (mobile_phone or ""),
             "calendar_color": calendar_color or "",
             "is_active": 1,
         }
         assigned_shelters = set(_normalize_selected_shelters(selected_shelters))
+
+        if mobile_phone_error:
+            flash(mobile_phone_error, "error")
+            return render_template(
+                "admin_user_form.html",
+                **_form_context(
+                    mode="add",
+                    user=form_user,
+                    assigned_shelters=assigned_shelters,
+                ),
+            )
 
         if not first_name or not last_name or not username or not role or not password:
             flash("First name, last name, username, role, and password are required.", "error")
@@ -322,7 +342,7 @@ def admin_add_user_view():
                     generate_password_hash(password),
                     role,
                     True,
-                    mobile_phone or None,
+                    mobile_phone,
                     calendar_color,
                     created_at,
                 ),
@@ -351,7 +371,7 @@ def admin_add_user_view():
                     generate_password_hash(password),
                     role,
                     1,
-                    mobile_phone or None,
+                    mobile_phone,
                     calendar_color,
                     created_at,
                 ),
@@ -421,10 +441,28 @@ def admin_edit_user_view(user_id: int):
         last_name = (request.form.get("last_name") or "").strip()
         username = (request.form.get("username") or "").strip()
         role = (request.form.get("role") or "").strip()
-        mobile_phone = (request.form.get("mobile_phone") or "").strip()
+        mobile_phone_raw = (request.form.get("mobile_phone") or "").strip()
+        mobile_phone, mobile_phone_error = _normalize_staff_mobile_phone(mobile_phone_raw)
         calendar_color = _normalize_calendar_color(request.form.get("calendar_color"))
         password = (request.form.get("password") or "").strip()
         selected_shelters = request.form.getlist("shelters")
+
+        if mobile_phone_error:
+            flash(mobile_phone_error, "error")
+            user["first_name"] = first_name
+            user["last_name"] = last_name
+            user["username"] = username
+            user["role"] = role
+            user["mobile_phone"] = mobile_phone_raw
+            user["calendar_color"] = calendar_color or ""
+            return render_template(
+                "admin_user_form.html",
+                **_form_context(
+                    mode="edit",
+                    user=user,
+                    assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                ),
+            )
 
         if not first_name or not last_name or not username or not role:
             flash("First name, last name, username, and role are required.", "error")
@@ -432,7 +470,7 @@ def admin_edit_user_view(user_id: int):
             user["last_name"] = last_name
             user["username"] = username
             user["role"] = role
-            user["mobile_phone"] = mobile_phone
+            user["mobile_phone"] = mobile_phone or ""
             user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
@@ -449,7 +487,7 @@ def admin_edit_user_view(user_id: int):
             user["last_name"] = last_name
             user["username"] = username
             user["role"] = role
-            user["mobile_phone"] = mobile_phone
+            user["mobile_phone"] = mobile_phone or ""
             user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
@@ -466,7 +504,7 @@ def admin_edit_user_view(user_id: int):
             user["last_name"] = last_name
             user["username"] = username
             user["role"] = current_user_role
-            user["mobile_phone"] = mobile_phone
+            user["mobile_phone"] = mobile_phone or ""
             user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
@@ -483,7 +521,7 @@ def admin_edit_user_view(user_id: int):
             user["last_name"] = last_name
             user["username"] = username
             user["role"] = current_user_role
-            user["mobile_phone"] = mobile_phone
+            user["mobile_phone"] = mobile_phone or ""
             user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
@@ -500,7 +538,7 @@ def admin_edit_user_view(user_id: int):
             user["last_name"] = last_name
             user["username"] = username
             user["role"] = role if _require_admin() else current_user_role
-            user["mobile_phone"] = mobile_phone
+            user["mobile_phone"] = mobile_phone or ""
             user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
@@ -521,7 +559,7 @@ def admin_edit_user_view(user_id: int):
             user["last_name"] = last_name
             user["username"] = username
             user["role"] = role if _require_admin() else current_user_role
-            user["mobile_phone"] = mobile_phone
+            user["mobile_phone"] = mobile_phone or ""
             user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
@@ -552,7 +590,7 @@ def admin_edit_user_view(user_id: int):
                     last_name,
                     username,
                     final_role,
-                    mobile_phone or None,
+                    mobile_phone,
                     calendar_color,
                     generate_password_hash(password),
                     user_id,
@@ -575,7 +613,7 @@ def admin_edit_user_view(user_id: int):
                     last_name,
                     username,
                     final_role,
-                    mobile_phone or None,
+                    mobile_phone,
                     calendar_color,
                     user_id,
                 ),
