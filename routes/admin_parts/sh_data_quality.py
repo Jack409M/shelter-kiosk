@@ -448,6 +448,7 @@ def _load_data_quality_issues() -> list[dict]:
         _enrollment_shelter_mismatch_issue(),
         _missing_intake_issue(),
         _duplicate_names_issue(),
+        *load_cross_table_integrity_issues(),
     ]
 
 
