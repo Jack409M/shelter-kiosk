@@ -590,13 +590,13 @@
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">7</div>
                 <div>
-                  <h2>Transportation and Family Snapshot</h2>
-                  <p>Baseline transportation and household indicators supported by the intake pipeline.</p>
+                  <h2>Transportation and Family Follow Up</h2>
+                  <p>Baseline transportation status and family intake follow up flags.</p>
                 </div>
               </div>
               <div class="section-card-body">
                 <div class="field-grid">
-                  <div class="toggle-field span-2">
+                  <div class="toggle-field span-3">
                     <label>Car at Entry</label>
                     <div class="toggle-inputs">
                       <input type="radio" id="car_at_entry_yes" name="car_at_entry" value="yes" {% if form_data.get('car_at_entry') == 'yes' %}checked{% endif %}>
@@ -607,7 +607,7 @@
                     </div>
                   </div>
 
-                  <div class="toggle-field span-3">
+                  <div class="toggle-field span-3" data-car-insurance-block>
                     <label>Car Insurance at Entry</label>
                     <div class="toggle-inputs">
                       <input type="radio" id="car_insurance_at_entry_yes" name="car_insurance_at_entry" value="yes" {% if form_data.get('car_insurance_at_entry') == 'yes' %}checked{% endif %}>
@@ -616,10 +616,10 @@
                       <input type="radio" id="car_insurance_at_entry_no" name="car_insurance_at_entry" value="no" {% if form_data.get('car_insurance_at_entry') == 'no' %}checked{% endif %}>
                       <label class="toggle-chip toggle-no" for="car_insurance_at_entry_no">No</label>
                     </div>
-                    <small>Required only when car at entry is yes.</small>
+                    <small>If car at entry is no, insurance defaults to no.</small>
                   </div>
 
-                  <div class="toggle-field span-2">
+                  <div class="toggle-field span-3">
                     <label>Has Children</label>
                     <div class="toggle-inputs">
                       <input type="radio" id="has_children_yes" name="has_children" value="yes" {% if form_data.get('has_children') == 'yes' %}checked{% endif %}>
@@ -629,42 +629,12 @@
                       <label class="toggle-chip toggle-no" for="has_children_no">No</label>
                     </div>
                   </div>
-                </div>
 
-                <div class="field-grid intake-subgrid">
-                  <div class="field span-2 field-compact">
-                    <label for="kids_at_dwc">Kids at DWC</label>
-                    <input id="kids_at_dwc" name="kids_at_dwc" type="number" min="0" step="1" value="{{ form_data.get('kids_at_dwc', '') }}">
-                  </div>
-
-                  <div class="field span-2 field-compact">
-                    <label for="kids_served_outside_under_18">Kids Served Outside Under 18</label>
-                    <input id="kids_served_outside_under_18" name="kids_served_outside_under_18" type="number" min="0" step="1" value="{{ form_data.get('kids_served_outside_under_18', '') }}">
-                  </div>
-
-                  <div class="field span-2 field-compact">
-                    <label for="kids_ages_0_5">Kids Ages 0 to 5</label>
-                    <input id="kids_ages_0_5" name="kids_ages_0_5" type="number" min="0" step="1" value="{{ form_data.get('kids_ages_0_5', '') }}">
-                  </div>
-
-                  <div class="field span-2 field-compact">
-                    <label for="kids_ages_6_11">Kids Ages 6 to 11</label>
-                    <input id="kids_ages_6_11" name="kids_ages_6_11" type="number" min="0" step="1" value="{{ form_data.get('kids_ages_6_11', '') }}">
-                  </div>
-
-                  <div class="field span-2 field-compact">
-                    <label for="kids_ages_12_17">Kids Ages 12 to 17</label>
-                    <input id="kids_ages_12_17" name="kids_ages_12_17" type="number" min="0" step="1" value="{{ form_data.get('kids_ages_12_17', '') }}">
-                  </div>
-
-                  <div class="field span-2 field-compact">
-                    <label for="kids_reunited_while_in_program">Kids Reunited While in Program</label>
-                    <input id="kids_reunited_while_in_program" name="kids_reunited_while_in_program" type="number" min="0" step="1" value="{{ form_data.get('kids_reunited_while_in_program', '') }}">
-                  </div>
-
-                  <div class="field span-2 field-compact">
-                    <label for="healthy_babies_born_at_dwc">Healthy Babies Born at DWC</label>
-                    <input id="healthy_babies_born_at_dwc" name="healthy_babies_born_at_dwc" type="number" min="0" step="1" value="{{ form_data.get('healthy_babies_born_at_dwc', '') }}">
+                  <div class="field span-12 family-follow-up-note">
+                    <label>Family Intake Follow Up</label>
+                    <div class="follow-up-card">
+                      If Has Children is yes, staff should complete the dedicated family intake after this intake is finalized.
+                    </div>
                   </div>
                 </div>
               </div>
@@ -903,7 +873,7 @@
                   <div class="intake-review-item">Living Situation</div>
                   <div class="intake-review-item">Employment and Income</div>
                   <div class="intake-review-item">Health and Treatment</div>
-                  <div class="intake-review-item">Transportation and Family</div>
+                  <div class="intake-review-item">Transportation and Family Follow Up</div>
                   <div class="intake-review-item">Needs at Entry</div>
                   <div class="intake-review-item">Trauma and Vulnerability</div>
                   <div class="intake-review-item">Barriers to Stability</div>
@@ -938,4 +908,39 @@
     </form>
   </div>
 </div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const carYes = document.getElementById("car_at_entry_yes");
+    const carNo = document.getElementById("car_at_entry_no");
+    const insuranceYes = document.getElementById("car_insurance_at_entry_yes");
+    const insuranceNo = document.getElementById("car_insurance_at_entry_no");
+    const insuranceBlock = document.querySelector("[data-car-insurance-block]");
+
+    function syncCarInsuranceDefault() {
+      if (!carNo || !insuranceNo || !insuranceBlock) {
+        return;
+      }
+
+      if (carNo.checked) {
+        insuranceNo.checked = true;
+        if (insuranceYes) {
+          insuranceYes.checked = false;
+        }
+        insuranceBlock.classList.add("is-muted");
+      } else {
+        insuranceBlock.classList.remove("is-muted");
+      }
+    }
+
+    if (carYes) {
+      carYes.addEventListener("change", syncCarInsuranceDefault);
+    }
+
+    if (carNo) {
+      carNo.addEventListener("change", syncCarInsuranceDefault);
+    }
+
+    syncCarInsuranceDefault();
+  });
+</script>
 {% endblock %}
