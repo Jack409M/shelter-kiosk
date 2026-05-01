@@ -6,8 +6,18 @@ from core.field_change_logger import log_field_change
 from routes.case_management_parts.helpers import placeholder
 
 
+def _safe_next_url() -> str:
+    next_url = (request.form.get("next") or request.args.get("next") or "").strip()
+
+    if next_url.startswith("/") and not next_url.startswith("//"):
+        return next_url
+
+    return ""
+
+
 def edit_resident_profile_view(resident_id: int):
     ph = placeholder()
+    next_url = _safe_next_url()
 
     resident = db_fetchone(
         f"""
@@ -68,13 +78,16 @@ def edit_resident_profile_view(resident_id: int):
                 change_reason="profile_edit",
             )
         except Exception:
-            # Do not block user flow if audit logging fails
+            # Do not block user flow if audit logging fails.
             pass
 
         flash("Resident profile updated.", "ok")
+        if next_url:
+            return redirect(next_url)
         return redirect(url_for("residents.edit_resident_profile", resident_id=resident_id))
 
     return render_template(
         "resident_profile_edit.html",
         resident=resident,
+        next=next_url,
     )
