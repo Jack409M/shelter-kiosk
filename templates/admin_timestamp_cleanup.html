@@ -198,6 +198,7 @@
   const summaryCard = document.getElementById("summary-card");
   const detailsCard = document.getElementById("details-card");
   const detailsBody = document.getElementById("details-body");
+  const csrfToken = "{{ csrf_token() }}";
 
   function setBusy(isBusy) {
     previewBtn.disabled = isBusy;
@@ -243,6 +244,7 @@
     resultEl.innerText = applied ? "Applying cleanup..." : "Running preview...";
 
     const formData = new FormData();
+    formData.append("_csrf_token", csrfToken);
     if (applied) {
       formData.append("apply", "1");
     }
@@ -250,13 +252,22 @@
     try {
       const response = await fetch("/staff/admin/timestamp-cleanup", {
         method: "POST",
+        headers: {
+          "X-CSRF-Token": csrfToken
+        },
         body: formData
       });
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        resultEl.innerText = "Cleanup failed because the server did not return JSON. Check server logs.";
+        return;
+      }
 
       const data = await response.json();
 
       if (!response.ok) {
-        resultEl.innerText = "Cleanup failed.";
+        resultEl.innerText = data.error || "Cleanup failed.";
         return;
       }
 
