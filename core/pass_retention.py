@@ -11,19 +11,24 @@ from core.helpers import utcnow_iso
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
+def _parse_dt(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
 def _utc_naive_now_plus(hours: int) -> str:
-    return (datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=hours)).isoformat(
-        timespec="seconds"
-    )
+    return (datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=hours)).isoformat(timespec="seconds")
 
 
 def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None) -> str | None:
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
         try:
-            return (datetime.fromisoformat(raw_end_at) + timedelta(hours=48)).isoformat(
-                timespec="seconds"
-            )
+            return (datetime.fromisoformat(raw_end_at) + timedelta(hours=48)).isoformat(timespec="seconds")
         except Exception:
             return None
 
@@ -72,6 +77,8 @@ def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
         return 0
 
     now_iso = utcnow_iso()
+    now_dt = _parse_dt(now_iso)
+
     rows = db_fetchall(
         """
         SELECT id, end_at, end_date
@@ -86,7 +93,9 @@ def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
 
     for row in rows:
         expected_back_at = _expected_back_deadline(row.get("end_at"), row.get("end_date"))
-        if expected_back_at and expected_back_at > now_iso:
+        expected_dt = _parse_dt(expected_back_at)
+
+        if expected_dt and now_dt and expected_dt > now_dt:
             continue
 
         delete_after_at = cleanup_deadline_from_expected_back(
