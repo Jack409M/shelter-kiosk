@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
+from datetime import UTC, datetime
 from threading import Lock
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
@@ -27,6 +29,10 @@ _PG_POOL_LOCK = Lock()
 
 _LEGACY_TRANSPORT_INSERT_SQL = (
     "insert into transport_requests (resident_identifier, shelter, status) values (?, ?, ?)"
+)
+
+_TIMESTAMPISH_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$"
 )
 
 
@@ -266,24 +272,51 @@ def _rewrite_legacy_sqlite_transport_insert(
     return rewritten_sql, rewritten_params
 
 
+def _normalize_timestamp_param(value: Any) -> Any:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        raw = value.strip()
+        if not _TIMESTAMPISH_RE.match(raw):
+            return value
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return value
+    else:
+        return value
+
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+
+    return parsed.replace(microsecond=0).isoformat(timespec="seconds")
+
+
+def _normalize_db_params(params: tuple[Any, ...]) -> tuple[Any, ...]:
+    if not params:
+        return params
+    return tuple(_normalize_timestamp_param(value) for value in params)
+
+
 def _prepare_sql_and_params(
     sql: str,
     params: tuple[Any, ...],
 ) -> tuple[str | None, tuple[Any, ...]]:
     kind = _db_kind()
     normalized_sql = _normalize_sql(sql, db_kind=kind)
+    normalized_params = _normalize_db_params(params)
 
     if kind != "sqlite":
-        return normalized_sql, params
+        return normalized_sql, normalized_params
 
     if _sqlite_should_skip_statement(normalized_sql):
-        return None, params
+        return None, normalized_params
 
     rewritten_sql, rewritten_params = _rewrite_legacy_sqlite_transport_insert(
         normalized_sql,
-        params,
+        normalized_params,
     )
-    return rewritten_sql, rewritten_params
+    return rewritten_sql, _normalize_db_params(rewritten_params)
 
 
 def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
@@ -297,9 +330,10 @@ def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
 
 def db_fetchone(sql: str, params: tuple[Any, ...] = ()) -> DbRow | None:
     normalized_sql = _normalize_sql(sql, db_kind=_db_kind())
+    normalized_params = _normalize_db_params(params)
 
     with _db_cursor(dict_rows=True) as cur:
-        cur.execute(normalized_sql, params)
+        cur.execute(normalized_sql, normalized_params)
         row = cur.fetchone()
 
     if row is None:
@@ -310,9 +344,10 @@ def db_fetchone(sql: str, params: tuple[Any, ...] = ()) -> DbRow | None:
 
 def db_fetchall(sql: str, params: tuple[Any, ...] = ()) -> list[DbRow]:
     normalized_sql = _normalize_sql(sql, db_kind=_db_kind())
+    normalized_params = _normalize_db_params(params)
 
     with _db_cursor(dict_rows=True) as cur:
-        cur.execute(normalized_sql, params)
+        cur.execute(normalized_sql, normalized_params)
         rows = cur.fetchall()
 
     return [_row_to_dict(row) for row in rows]
