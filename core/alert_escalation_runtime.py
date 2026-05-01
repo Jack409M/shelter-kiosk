@@ -55,6 +55,33 @@ def recent_failure_count(alert_key: str) -> int:
     return int(row[0] or 0)
 
 
+def escalation_is_acknowledged(alert_key: str) -> bool:
+    cleaned_key = _safe_text(alert_key, 240)
+    if not cleaned_key:
+        return False
+
+    try:
+        row = db_fetchone(
+            """
+            SELECT id, acknowledged_at, status
+            FROM system_alerts
+            WHERE alert_key = %s
+              AND status = %s
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (cleaned_key, "open"),
+        )
+    except Exception:
+        return False
+
+    if not row:
+        return False
+
+    acknowledged_at = row.get("acknowledged_at") if isinstance(row, dict) else row[1]
+    return bool(_safe_text(acknowledged_at, 120))
+
+
 def _send_sms_escalation(recipient: str, message: str) -> bool:
     try:
         from core.sms_sender import send_sms
@@ -88,6 +115,16 @@ def handle_alert_escalation(
 
     alert_key = _safe_text(alert.get("alert_key"), 240)
     if not alert_key:
+        return
+
+    if escalation_is_acknowledged(alert_key):
+        log_delivery(
+            channel="escalation",
+            status="suppressed",
+            alert=alert,
+            message="Alert escalation suppressed because the alert has been acknowledged.",
+            metadata={"alert_key": alert_key},
+        )
         return
 
     failure_count = recent_failure_count(alert_key)
