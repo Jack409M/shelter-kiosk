@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from flask import g, session
+from flask import g, session, current_app
 
 from core.db import db_execute, db_fetchone
 from routes.case_management_parts.helpers import clean, draft_display_name, placeholder
@@ -222,6 +222,11 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
     try:
         payload = json.loads(payload_raw or "{}")
     except json.JSONDecodeError:
+        current_app.logger.exception(
+            "Corrupted intake draft JSON detected draft_id=%s shelter=%s",
+            draft_id_value,
+            current_shelter,
+        )
         payload = {}
 
     payload["draft_id"] = str(draft_id_value)
