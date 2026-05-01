@@ -27,6 +27,7 @@ from routes.admin_parts.duplicate_primary_selection import (
     duplicate_merge_execute_view,
     select_duplicate_primary_view,
 )
+from routes.admin_parts.escalation_log import escalation_log_view
 from routes.admin_parts.field_audit import (
     admin_field_audit_view,
 )
@@ -149,11 +150,20 @@ def admin_resolve_system_alert(alert_id: int):
 def admin_system_health_events():
     return system_health_events_api()
 
+
 @admin.route("/staff/admin/system-health/sms-log", methods=["GET"])
 @require_login
 @require_shelter
 def admin_sms_log():
     return sms_log_view()
+
+
+@admin.route("/staff/admin/system-health/escalation-log", methods=["GET"])
+@require_login
+@require_shelter
+def admin_escalation_log():
+    return escalation_log_view()
+
 
 @admin.route("/staff/admin/system-health/data-quality", methods=["GET"])
 @require_login
