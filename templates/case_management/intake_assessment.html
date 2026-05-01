@@ -7,8 +7,8 @@
 {% block content %}
 {% set form_data = form_data or {} %}
 {% set review_passed = review_passed or form_data.get('review_passed') %}
-<div class="intake-page">
-  <div class="intake-header">
+<div class="intake-page intake-enterprise-page">
+  <div class="intake-header intake-enterprise-header">
     <div class="intake-header-copy">
       <h1>Intake and Assessment</h1>
       {% if is_edit_mode %}
@@ -134,7 +134,8 @@
       <section class="section-card intake-step-card">
         <div class="section-card-head intake-step-head">
           <div class="intake-step-marker">1</div>
-          <div>
+          <div class="intake-section-icon" aria-hidden="true">ⓘ</div>
+          <div class="intake-step-title">
             <h2>Match Check Information</h2>
             <p>Date entered and core identity fields used for duplicate review.</p>
           </div>
@@ -207,7 +208,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">2</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">♙</div>
+                <div class="intake-step-title">
                   <h2>Basic Info</h2>
                   <p>Core resident identifiers and program placement.</p>
                 </div>
@@ -301,7 +303,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">3</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">☎</div>
+                <div class="intake-step-title">
                   <h2>Emergency Contact</h2>
                   <p>Required contact information for emergency follow up.</p>
                 </div>
@@ -348,7 +351,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">4</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">⌂</div>
+                <div class="intake-step-title">
                   <h2>Living Situation</h2>
                   <p>Where she is coming from and local residence context.</p>
                 </div>
@@ -411,7 +415,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">5</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">▣</div>
+                <div class="intake-step-title">
                   <h2>Employment and Income</h2>
                   <p>Work status, education, benefits, and financial baseline.</p>
                 </div>
@@ -519,7 +524,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">6</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">♡</div>
+                <div class="intake-step-title">
                   <h2>Health and Treatment</h2>
                   <p>Recovery dates, treatment status, disability, and health related baseline.</p>
                 </div>
@@ -589,7 +595,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">7</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">▰</div>
+                <div class="intake-step-title">
                   <h2>Transportation and Family Follow Up</h2>
                   <p>Baseline transportation status and family intake follow up flags.</p>
                 </div>
@@ -643,7 +650,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">8</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">☷</div>
+                <div class="intake-step-title">
                   <h2>Needs at Entry</h2>
                   <p>Select each official need identified at intake. Selected needs carry into the progress workflow until addressed.</p>
                 </div>
@@ -739,7 +747,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">9</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">♢</div>
+                <div class="intake-step-title">
                   <h2>Trauma and Vulnerability</h2>
                   <p>Assessment items that measure trauma burden and vulnerability at entry.</p>
                 </div>
@@ -821,7 +830,8 @@
             <section class="section-card intake-step-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">10</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">⚖</div>
+                <div class="intake-step-title">
                   <h2>Barriers to Stability</h2>
                   <p>Baseline barriers that feed case management planning and reporting.</p>
                 </div>
@@ -861,7 +871,8 @@
             <section class="section-card intake-step-card intake-review-card">
               <div class="section-card-head intake-step-head">
                 <div class="intake-step-marker">11</div>
-                <div>
+                <div class="intake-section-icon" aria-hidden="true">✓</div>
+                <div class="intake-step-title">
                   <h2>Review</h2>
                   <p>Visual final check before submission. This section does not change validation behavior.</p>
                 </div>
