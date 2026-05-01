@@ -6,6 +6,7 @@ from urllib.parse import quote
 from flask import flash, redirect, render_template, request, session, url_for
 
 from core.admin_rbac import require_admin_role
+from core.cross_table_integrity import load_cross_table_integrity_issues
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from routes.case_management_parts.helpers import placeholder
 
