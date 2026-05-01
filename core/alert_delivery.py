@@ -476,4 +476,16 @@ def deliver_system_alert(alert: dict[str, Any]) -> dict[str, bool]:
     if severity == "critical":
         _log_critical_delivery_failure(alert, results)
 
+    # Escalation hook (safe, isolated)
+    try:
+        from core.alert_escalation_runtime import handle_alert_escalation
+
+        handle_alert_escalation(
+            alert=alert,
+            results=results,
+            log_delivery=_log_delivery,
+        )
+    except Exception:
+        pass
+
     return results
