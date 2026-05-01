@@ -39,6 +39,7 @@ from routes.admin_parts.sh_dashboard import (
     resolve_system_health_alert_view,
     system_health_dashboard_view,
     system_health_events_api,
+    sms_log_view,
 )
 from routes.admin_parts.sh_data_quality import (
     confirm_duplicate_names_separate_view,
