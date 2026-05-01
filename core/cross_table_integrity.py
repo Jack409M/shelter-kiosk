@@ -402,6 +402,14 @@ def _inactive_resident_with_active_enrollment_issue() -> dict[str, Any]:
     )
     rows = _with_case_action(rows)
 
+    for row in rows:
+        enrollment_id = row.get("enrollment_id")
+        if enrollment_id:
+            row["action_post_url"] = (
+                f"/staff/admin/system-health/data-quality/fix/close-enrollment/{enrollment_id}"
+            )
+            row["action_post_label"] = "Close active enrollment"
+
     return _issue(
         key="inactive_resident_with_active_enrollment",
         label="Inactive resident with active enrollment",
@@ -409,7 +417,7 @@ def _inactive_resident_with_active_enrollment_issue() -> dict[str, Any]:
         severity="error",
         count=count,
         rows=rows,
-        fix_note="Open the resident case and resolve the lifecycle state. Exit should normally drive deactivation.",
+        fix_note="Close the active enrollment for inactive residents. This does not change the resident record.",
     )
 
 
