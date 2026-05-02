@@ -4,7 +4,7 @@ from datetime import UTC, datetime, time, timedelta
 
 from flask import has_app_context
 
-from core.db import db_execute, db_fetchall
+from core.db import db_execute, db_fetchall, db_transaction
 from core.time_utils import CHICAGO_TZ, parse_utc_naive_datetime, utc_naive_iso, utcnow_iso
 
 
@@ -163,21 +163,25 @@ def delete_expired_passes_for_shelter(shelter: str) -> int:
         (shelter,),
     )
 
-    deleted_count = 0
+    expired_pass_ids: list[int] = []
 
     for row in rows:
         delete_after_dt = parse_utc_naive_datetime(row.get("delete_after_at"))
         if delete_after_dt is None or delete_after_dt > now_dt:
             continue
 
-        pass_id = int(row["id"])
+        expired_pass_ids.append(int(row["id"]))
 
-        db_execute("DELETE FROM resident_notifications WHERE related_pass_id = %s", (pass_id,))
-        db_execute("DELETE FROM resident_pass_request_details WHERE pass_id = %s", (pass_id,))
-        db_execute("DELETE FROM resident_passes WHERE id = %s", (pass_id,))
-        deleted_count += 1
+    if not expired_pass_ids:
+        return 0
 
-    return deleted_count
+    with db_transaction():
+        for pass_id in expired_pass_ids:
+            db_execute("DELETE FROM resident_notifications WHERE related_pass_id = %s", (pass_id,))
+            db_execute("DELETE FROM resident_pass_request_details WHERE pass_id = %s", (pass_id,))
+            db_execute("DELETE FROM resident_passes WHERE id = %s", (pass_id,))
+
+    return len(expired_pass_ids)
 
 
 def run_pass_retention_cleanup_for_shelter(shelter: str) -> dict[str, int | str]:
