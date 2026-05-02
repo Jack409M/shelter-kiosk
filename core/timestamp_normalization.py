@@ -11,6 +11,8 @@ from core.time_utils import utc_naive_iso
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
+POSTGRES_DB_KINDS = {"pg", "postgres", "postgresql"}
+
 TIMESTAMP_COLUMN_NAMES = {
     "actual_obligation_end_time",
     "approved_at",
@@ -210,7 +212,8 @@ def _list_timestamp_targets_pg() -> list[tuple[str, str]]:
 
 
 def list_timestamp_targets() -> list[tuple[str, str]]:
-    if g.get("db_kind") == "pg":
+    kind = str(g.get("db_kind") or "").strip().lower()
+    if kind in POSTGRES_DB_KINDS:
         return _list_timestamp_targets_pg()
     return _list_timestamp_targets_sqlite()
 
