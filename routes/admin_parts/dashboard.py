@@ -20,7 +20,7 @@ from core.admin_dashboard_payload import (
 from core.admin_rbac import current_role as _current_role
 from core.admin_rbac import require_admin_role as _require_admin
 from core.audit import log_action
-from core.db import db_execute, db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import fmt_dt, utcnow_iso
 from core.rate_limit import ban_ip
 
@@ -184,40 +184,41 @@ def admin_update_security_settings_view():
     if bool_value != default_value:
         expires_at = _temporary_expiration_iso()
 
-    db_execute(
-        f"""
-        UPDATE security_settings
-        SET {field} = {("%s" if kind == "pg" else "?")},
-            {expires_field} = {("%s" if kind == "pg" else "?")},
-            updated_at = {("%s" if kind == "pg" else "?")}
-        WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)
-        """,
-        (
-            _security_setting_value_for_db(bool_value, kind),
-            expires_at,
-            now,
-        ),
-    )
-
-    db_execute(
-        """
-        INSERT INTO security_config_history (
-            setting_key,
-            old_value,
-            new_value,
-            changed_by_user_id,
-            changed_at
+    with db_transaction():
+        db_execute(
+            f"""
+            UPDATE security_settings
+            SET {field} = {("%s" if kind == "pg" else "?")},
+                {expires_field} = {("%s" if kind == "pg" else "?")},
+                updated_at = {("%s" if kind == "pg" else "?")}
+            WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)
+            """,
+            (
+                _security_setting_value_for_db(bool_value, kind),
+                expires_at,
+                now,
+            ),
         )
-        VALUES (%s, %s, %s, %s, %s)
-        """,
-        (
-            field,
-            _security_setting_value_for_history(old_bool_value),
-            _security_setting_value_for_history(bool_value),
-            session.get("staff_user_id"),
-            now,
-        ),
-    )
+
+        db_execute(
+            """
+            INSERT INTO security_config_history (
+                setting_key,
+                old_value,
+                new_value,
+                changed_by_user_id,
+                changed_at
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                field,
+                _security_setting_value_for_history(old_bool_value),
+                _security_setting_value_for_history(bool_value),
+                session.get("staff_user_id"),
+                now,
+            ),
+        )
 
     log_action(
         "security_settings",
