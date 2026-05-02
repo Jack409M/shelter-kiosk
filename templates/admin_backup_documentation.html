@@ -2,49 +2,241 @@
 
 {% block page_header %}
 <div class="page-header">
-  <h1 class="page-title">Backup and Restore Documentation</h1>
+  <h1 class="page-title">Backup and Restore Guide</h1>
   <p class="page-subtitle">
-    Verified backup practices, restore safety rules, and recovery process for the Shelter Kiosk system.
+    A guided recovery checklist for confirming backups, validating restore readiness, and avoiding unsafe production restores.
   </p>
 </div>
 {% endblock %}
 
 {% block content %}
+<style>
+  .backup-guide-shell {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+    gap: 16px;
+    align-items: start;
+  }
 
-<div class="card" style="margin-bottom:16px;">
-  <h2 class="card-title-large">Backup Summary</h2>
-  <ul>
-    {% for key, value in backup_summary.items() %}
-      <li>{{ value }}</li>
-    {% endfor %}
-  </ul>
+  .backup-guide-card {
+    border: 1px solid #d7e1ea;
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 18px;
+    box-shadow: 0 10px 22px rgba(18, 38, 63, 0.07);
+    margin-bottom: 16px;
+  }
+
+  .backup-guide-card h2,
+  .backup-step-card h2 {
+    margin: 0 0 10px;
+    color: #1f3550;
+  }
+
+  .backup-guide-card p,
+  .backup-step-card p {
+    color: #60758a;
+    line-height: 1.5;
+  }
+
+  .backup-step-card {
+    border: 1px solid #d7e1ea;
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 18px;
+    box-shadow: 0 10px 22px rgba(18, 38, 63, 0.07);
+    margin-bottom: 14px;
+  }
+
+  .backup-step-heading {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .backup-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: #eaf2fb;
+    color: #1f3550;
+    font-weight: 900;
+  }
+
+  .backup-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .backup-checklist li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid #edf2f7;
+    color: #40566d;
+    line-height: 1.45;
+  }
+
+  .backup-checklist li:first-child {
+    border-top: 0;
+  }
+
+  .backup-checklist input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+  }
+
+  .backup-warning {
+    border: 1px solid #f0c7c3;
+    border-radius: 18px;
+    background: #fffafa;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .backup-warning strong {
+    color: #a7372f;
+  }
+
+  .backup-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .backup-action-row a,
+  .backup-action-row button {
+    border: 1px solid #c7d3df;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1f3550;
+    padding: 9px 12px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .backup-note-box {
+    width: 100%;
+    min-height: 120px;
+    border: 1px solid #cfd9e3;
+    border-radius: 14px;
+    padding: 12px;
+    color: #1f3550;
+  }
+
+  @media (max-width: 900px) {
+    .backup-guide-shell {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="backup-warning">
+  <strong>Production restore safety rule:</strong>
+  this page does not restore the production database from the app UI.
+  It walks an administrator through the required checks before any controlled Railway level recovery.
 </div>
 
-<div class="card" style="margin-bottom:16px;">
-  <h2 class="card-title-large">Restore Safety Boundaries</h2>
-  <ul>
-    {% for item in restore_boundaries %}
-      <li>{{ item }}</li>
-    {% endfor %}
-  </ul>
-</div>
+<div class="backup-guide-shell">
+  <aside>
+    <div class="backup-guide-card">
+      <h2>Current Backup Setup</h2>
+      <ul>
+        {% for key, value in backup_summary.items() %}
+          <li>{{ value }}</li>
+        {% endfor %}
+      </ul>
+    </div>
 
-<div class="card" style="margin-bottom:16px;">
-  <h2 class="card-title-large">Daily Backup Verification Checklist</h2>
-  <ul>
-    {% for item in daily_checklist %}
-      <li>{{ item }}</li>
-    {% endfor %}
-  </ul>
-</div>
+    <div class="backup-guide-card">
+      <h2>Hard Safety Boundaries</h2>
+      <ul>
+        {% for item in restore_boundaries %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </aside>
 
-<div class="card">
-  <h2 class="card-title-large">Recovery Procedure</h2>
-  <ol>
-    {% for step in recovery_steps %}
-      <li>{{ step }}</li>
-    {% endfor %}
-  </ol>
+  <main>
+    <section class="backup-step-card">
+      <div class="backup-step-heading">
+        <span class="backup-step-number">1</span>
+        <h2>Confirm Daily Backup Readiness</h2>
+      </div>
+      <p>Use this checklist during normal operations to confirm that recoverable backups exist before there is an emergency.</p>
+      <ul class="backup-checklist">
+        {% for item in daily_checklist %}
+          <li>
+            <input type="checkbox" aria-label="{{ item }}">
+            <span>{{ item }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="backup-step-card">
+      <div class="backup-step-heading">
+        <span class="backup-step-number">2</span>
+        <h2>Select the Recovery Point</h2>
+      </div>
+      <ul class="backup-checklist">
+        <li>
+          <input type="checkbox" aria-label="Incident confirmed">
+          <span>Confirm the incident actually requires database recovery rather than a smaller repair.</span>
+        </li>
+        <li>
+          <input type="checkbox" aria-label="Backup time selected">
+          <span>Select the cleanest backup from before the incident.</span>
+        </li>
+        <li>
+          <input type="checkbox" aria-label="Data gap documented">
+          <span>Document the expected data gap between the backup time and the planned restore time.</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="backup-step-card">
+      <div class="backup-step-heading">
+        <span class="backup-step-number">3</span>
+        <h2>Validate Before Production Recovery</h2>
+      </div>
+      <ul class="backup-checklist">
+        {% for step in recovery_steps %}
+          <li>
+            <input type="checkbox" aria-label="{{ step }}">
+            <span>{{ step }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="backup-step-card">
+      <div class="backup-step-heading">
+        <span class="backup-step-number">4</span>
+        <h2>Record Restore Decision Notes</h2>
+      </div>
+      <p>
+        Use this area during a recovery event to capture what was checked. These notes are temporary on this page.
+        Copy them into the operational incident record before leaving the page.
+      </p>
+      <textarea class="backup-note-box" placeholder="Backup date, backup source, validation result, tables checked, person approving restore, and follow up notes."></textarea>
+      <div class="backup-action-row">
+        <a href="{{ url_for('admin.admin_system_health') }}">Return to System Health</a>
+        <button type="button" onclick="window.print()">Print Checklist</button>
+      </div>
+    </section>
+  </main>
 </div>
 
 {% endblock %}
