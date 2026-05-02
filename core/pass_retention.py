@@ -1,34 +1,18 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
 from flask import has_app_context
 
 from core.db import db_execute, db_fetchall
-from core.helpers import utcnow_iso
-
-CHICAGO_TZ = ZoneInfo("America/Chicago")
-
-
-def _parse_dt(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except Exception:
-        return None
-
-    if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
-
-    return parsed.replace(microsecond=0)
+from core.time_utils import CHICAGO_TZ, parse_utc_naive_datetime, utc_naive_iso, utcnow_iso
 
 
 def _dt_to_utc_naive_iso(value: datetime) -> str:
-    if value.tzinfo is not None:
-        value = value.astimezone(UTC).replace(tzinfo=None)
-    return value.replace(microsecond=0).isoformat(timespec="seconds")
+    normalized = utc_naive_iso(value)
+    if normalized is None:
+        raise ValueError("datetime value could not be normalized.")
+    return normalized
 
 
 def _utc_naive_now_plus(hours: int) -> str:
@@ -38,7 +22,7 @@ def _utc_naive_now_plus(hours: int) -> str:
 def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None) -> str | None:
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
-        parsed_end_at = _parse_dt(raw_end_at)
+        parsed_end_at = parse_utc_naive_datetime(raw_end_at)
         if parsed_end_at is None:
             return None
         return _dt_to_utc_naive_iso(parsed_end_at + timedelta(hours=48))
@@ -62,7 +46,7 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
 def _expected_back_deadline(end_at: str | None, end_date: str | None) -> str | None:
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
-        parsed_end_at = _parse_dt(raw_end_at)
+        parsed_end_at = parse_utc_naive_datetime(raw_end_at)
         if parsed_end_at is None:
             return None
         return _dt_to_utc_naive_iso(parsed_end_at)
@@ -88,7 +72,7 @@ def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
         return 0
 
     now_iso = utcnow_iso()
-    now_dt = _parse_dt(now_iso)
+    now_dt = parse_utc_naive_datetime(now_iso)
 
     rows = db_fetchall(
         """
@@ -104,7 +88,7 @@ def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
 
     for row in rows:
         expected_back_at = _expected_back_deadline(row.get("end_at"), row.get("end_date"))
-        expected_dt = _parse_dt(expected_back_at)
+        expected_dt = parse_utc_naive_datetime(expected_back_at)
 
         if expected_dt and now_dt and expected_dt > now_dt:
             continue
@@ -165,7 +149,7 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
 
 
 def delete_expired_passes_for_shelter(shelter: str) -> int:
-    now_dt = _parse_dt(utcnow_iso())
+    now_dt = parse_utc_naive_datetime(utcnow_iso())
     if now_dt is None:
         return 0
 
@@ -182,7 +166,7 @@ def delete_expired_passes_for_shelter(shelter: str) -> int:
     deleted_count = 0
 
     for row in rows:
-        delete_after_dt = _parse_dt(row.get("delete_after_at"))
+        delete_after_dt = parse_utc_naive_datetime(row.get("delete_after_at"))
         if delete_after_dt is None or delete_after_dt > now_dt:
             continue
 
