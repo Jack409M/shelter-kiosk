@@ -5,6 +5,8 @@ from flask import current_app, flash, redirect, render_template, request, sessio
 from core.admin_rbac import require_admin_role
 from core.audit import log_action
 
+RESTORE_NOTES_CONFIRM_PHRASE = "SAVE RESTORE NOTES"
+
 
 def _staff_user_id() -> int | None:
     raw_staff_user_id = session.get("staff_user_id")
@@ -76,6 +78,11 @@ def save_backup_restore_notes_view():
     notes = (request.form.get("restore_notes") or "").strip()
     if not notes:
         flash("Restore notes were not saved because the notes box was empty.", "warning")
+        return redirect(url_for("admin.admin_backup_documentation"))
+
+    confirm_phrase = (request.form.get("confirm_phrase") or "").strip()
+    if confirm_phrase != RESTORE_NOTES_CONFIRM_PHRASE:
+        flash("Restore notes were not saved because the confirmation phrase did not match.", "error")
         return redirect(url_for("admin.admin_backup_documentation"))
 
     log_action(
