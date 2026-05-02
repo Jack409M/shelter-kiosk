@@ -1,4 +1,4 @@
-from flask import flash, redirect, render_template, request, url_for, session
+from flask import flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchone
 from core.field_change_logger import log_field_change

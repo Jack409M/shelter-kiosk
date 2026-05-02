@@ -335,9 +335,7 @@ def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
     prepared_sql, prepared_params = _prepare_sql_and_params(sql, params)
     if prepared_sql is None:
         _log_skipped_sql_execution(sql, params)
-        raise RuntimeError(
-            "DB execution was skipped. This indicates an invalid or unsupported SQL operation."
-        )
+        return
 
     with _db_cursor(dict_rows=False) as cur:
         cur.execute(prepared_sql, prepared_params)

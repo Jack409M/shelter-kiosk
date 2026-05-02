@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import os
 
-from core.time_utils import CHICAGO_TZ as CHI
-from core.time_utils import to_chicago, utcnow_iso
+from core.time_utils import to_chicago
 
 # ============================================================================
 # Timezone

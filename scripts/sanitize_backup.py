@@ -26,6 +26,8 @@ from urllib.parse import urlparse
 
 import psycopg
 
+from core.file_safety import safe_write_text
+
 
 SANITIZED_TEXT = "SANITIZED"
 FAKE_CITY = "FAKE_CITY"
@@ -296,7 +298,13 @@ def export_sanitized_backup(db_url: str, output_dir: Path) -> Path:
 def write_sha256(path: Path) -> Path:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     sha_path = path.with_suffix(path.suffix + ".sha256")
-    sha_path.write_text(f"{digest}  {path.name}\n", encoding="utf-8")
+    safe_write_text(
+        sha_path,
+        f"{digest}  {path.name}\n",
+        encoding="utf-8",
+        backup_count=0,
+        min_file_size_bytes=10,
+    )
     return sha_path
 
 

@@ -7,7 +7,6 @@ from flask import abort, current_app, flash, redirect, render_template, request,
 from core.constants import EDUCATION_LEVEL_OPTIONS
 from core.intake_service import (
     create_intake,
-    duplicate_identity,
     intake_edit_form_data,
     resident_enrollment_in_scope,
     save_intake_review_decision,

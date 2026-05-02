@@ -4,10 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from flask import g
-
 from core.db import db_execute, db_fetchall, db_transaction
-from core.runtime import load_runtime_config
 from core.time_utils import utc_naive_iso
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -213,15 +210,11 @@ def _list_timestamp_targets_pg() -> list[tuple[str, str]]:
 
 
 def _db_kind() -> str:
-    try:
-        runtime_config = load_runtime_config()
-        mode = str(runtime_config.database_mode or "").strip().lower()
-        if mode:
-            return mode
-    except Exception:
-        pass
-
-    return str(g.get("db_kind") or "").strip().lower()
+    import os
+    url = str(os.environ.get("DATABASE_URL") or "").lower()
+    if url.startswith("postgres"):
+        return "postgres"
+    return ""
 
 
 def list_timestamp_targets() -> list[tuple[str, str]]:

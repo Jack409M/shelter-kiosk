@@ -10,6 +10,12 @@ def _base_form():
         "email": "jane@example.com",
         "entry_date": "2026-04-12",
         "shelter": "abba",
+        "program_status": "active",
+        "emergency_contact_name": "Mary Doe",
+        "emergency_contact_relationship": "Sister",
+        "emergency_contact_phone": "(806) 555-2222",
+        "prior_living": "homeless",
+        "employment_status": "unemployed",
     }
 
 

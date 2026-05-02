@@ -20,6 +20,10 @@ from routes.admin_parts.dashboard import (
     admin_unlock_username_view,
     admin_update_security_settings_view,
 )
+from routes.admin_parts.data_quality_repairs import (
+    close_active_enrollment_for_inactive_resident_view,
+    fix_missing_family_baseline_view,
+)
 from routes.admin_parts.duplicate_merge_review import (
     duplicate_merge_resident_snapshot_view,
     duplicate_merge_review_queue_view,
@@ -41,19 +45,15 @@ from routes.admin_parts.role_permissions import role_permission_matrix_view
 from routes.admin_parts.sh_dashboard import (
     acknowledge_system_health_alert_view,
     resolve_system_health_alert_view,
+    sms_log_view,
     system_health_dashboard_view,
     system_health_events_api,
-    sms_log_view,
 )
 from routes.admin_parts.sh_data_quality import (
     confirm_duplicate_names_separate_view,
     fix_missing_intake_baseline_view,
     fix_shelter_mismatch_view,
     system_health_data_quality_view,
-)
-from routes.admin_parts.data_quality_repairs import (
-    close_active_enrollment_for_inactive_resident_view,
-    fix_missing_family_baseline_view,
 )
 from routes.admin_parts.system import (
     admin_break_test_view,

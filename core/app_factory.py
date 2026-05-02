@@ -24,6 +24,7 @@ from core.helpers import (
     utcnow_iso,
 )
 from core.pass_retention_scheduler import start_pass_retention_scheduler
+from core.phone_numbers import format_phone_display
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.request_security import register_request_security
 from core.request_utils import client_ip
@@ -32,7 +33,6 @@ from core.runtime import (
     init_db,
     load_runtime_config,
 )
-from core.phone_numbers import format_phone_display
 
 CSRF_EXEMPT_ENDPOINTS = {
     "resident_requests.sms_consent",
