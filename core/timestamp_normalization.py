@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from typing import Any
 
 from flask import g
 
 from core.db import db_execute, db_fetchall, db_transaction
+from core.time_utils import utc_naive_iso
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -215,35 +215,16 @@ def list_timestamp_targets() -> list[tuple[str, str]]:
     return _list_timestamp_targets_sqlite()
 
 
-def _parse_datetime(value: Any) -> datetime | None:
+def normalize_timestamp_value(value: Any) -> str | None:
     if value is None:
         return None
 
-    if isinstance(value, datetime):
-        parsed = value
-    else:
+    if not hasattr(value, "tzinfo"):
         raw = str(value or "").strip()
-        if not raw:
-            return None
-        if len(raw) <= 10:
+        if not raw or len(raw) <= 10:
             return None
 
-        try:
-            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-
-    if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
-
-    return parsed.replace(microsecond=0)
-
-
-def normalize_timestamp_value(value: Any) -> str | None:
-    parsed = _parse_datetime(value)
-    if parsed is None:
-        return None
-    return parsed.isoformat(timespec="seconds")
+    return utc_naive_iso(value)
 
 
 def _load_column_values(table_name: str, column_name: str) -> list[dict[str, Any]]:
