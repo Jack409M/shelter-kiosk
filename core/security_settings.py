@@ -4,6 +4,7 @@ from flask import g
 
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
+from core.time_utils import parse_utc_naive_datetime
 
 
 def _row_value(row, key: str, default=""):
@@ -17,23 +18,14 @@ def _row_value(row, key: str, default=""):
 
 
 def _expired_timestamp(value) -> bool:
-    if not value:
+    dt = parse_utc_naive_datetime(value)
+    if not dt:
         return False
 
-    raw = str(value).strip()
-    if not raw:
-        return False
+    from datetime import UTC, datetime
 
-    try:
-        from datetime import UTC, datetime
-
-        raw = raw.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(raw)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=UTC)
-        return dt <= datetime.now(UTC)
-    except Exception:
-        return False
+    now = datetime.now(UTC).replace(tzinfo=None)
+    return dt <= now
 
 
 def _bool_for_db(value: bool, kind: str):
@@ -132,9 +124,9 @@ def _reset_expired_temporary_settings(row: dict) -> dict:
         db_execute(
             f"""
             UPDATE security_settings
-            SET {field} = {("%s" if kind == "pg" else "?")},
+            SET {field} = {('%s' if kind == 'pg' else '?')},
                 {expires_field} = NULL,
-                updated_at = {("%s" if kind == "pg" else "?")}
+                updated_at = {('%s' if kind == 'pg' else '?')}
             WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)
             """,
             (_bool_for_db(value, kind), now),
