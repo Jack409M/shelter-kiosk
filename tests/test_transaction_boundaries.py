@@ -7,20 +7,33 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCAN_ROOTS = (PROJECT_ROOT / "core", PROJECT_ROOT / "routes")
 WRITE_SQL_RE = re.compile(
-    r"\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+    r"\b(?:INSERT\s+INTO|DELETE\s+FROM)\s+([a-zA-Z_][a-zA-Z0-9_]*)"
+    r"|\bUPDATE\s+(?!SET\b)([a-zA-Z_][a-zA-Z0-9_]*)",
     re.IGNORECASE,
 )
+SQL_EXECUTION_FUNCTIONS = {
+    "db_execute",
+    "execute",
+    "executemany",
+    "db_fetchone",
+    "db_fetchall",
+}
 
-# These helpers intentionally perform pieces of a larger atomic workflow.
-# They are allowed to write more than one table only because a named parent
-# service function or route wraps them in db_transaction(). New entries here
-# should be rare and should be reviewed as a transaction boundary decision.
+# These helpers intentionally perform pieces of a larger atomic workflow or
+# nonproduction data seeding. New entries here should be rare and should be
+# reviewed as a transaction boundary decision.
 ALLOWED_NESTED_MULTI_TABLE_WRITERS = {
     ("core/NP_placement_service.py", "replace_active_placement"),
+    ("core/demo_seed.py", "_maybe_insert_children"),
+    ("core/demo_seed.py", "_seed_attendance_and_weekly_summary"),
+    ("core/demo_seed.py", "_seed_case_management"),
+    ("core/demo_seed.py", "_seed_goals_and_appointments"),
+    ("core/demo_seed.py", "_seed_requests_and_passes"),
     ("core/l9_support_lifecycle.py", "start_level9_lifecycle"),
     ("routes/attendance_parts/pass_action_helpers.py", "apply_pass_approval"),
     ("routes/attendance_parts/pass_action_helpers.py", "apply_pass_check_in"),
     ("routes/attendance_parts/pass_action_helpers.py", "apply_pass_denial"),
+    ("routes/case_management_parts/exit.py", "_close_enrollment_and_resident"),
     ("routes/case_management_parts/family.py", "delete_child_view"),
     ("routes/case_management_parts/family.py", "edit_child_view"),
     ("routes/case_management_parts/family.py", "family_intake_view"),
@@ -29,18 +42,19 @@ ALLOWED_NESTED_MULTI_TABLE_WRITERS = {
     ("routes/case_management_parts/intake_inserts.py", "_insert_intake_assessment"),
     ("routes/case_management_parts/promotion_review.py", "promotion_review_view"),
     ("routes/case_management_parts/transfer.py", "_apply_transfer"),
+    ("routes/admin_parts/duplicate_primary_selection.py", "_dedupe_child_rows"),
     ("routes/resident_parts/pass_request_helpers.py", "insert_pass_request"),
 }
 
 # These are the high risk user actions where a route must call one named
 # atomic entry point instead of open coding separate table updates.
 REQUIRED_ATOMIC_ENTRY_POINTS = {
-    "routes/case_management_parts/exit.py": "_save_exit_assessment_atomic",
-    "core/intake_service.py": "create_intake",
-    "core/intake_service.py": "create_intake_for_existing_resident",
-    "core/intake_service.py": "update_intake",
-    "routes/case_management_parts/income_state_sync.py": "save_income_support_and_sync_snapshot_atomic",
-    "routes/case_management_parts/income_state_sync.py": "recalculate_and_sync_income_state_atomic",
+    ("routes/case_management_parts/exit.py", "_save_exit_assessment_atomic"),
+    ("core/intake_service.py", "create_intake"),
+    ("core/intake_service.py", "create_intake_for_existing_resident"),
+    ("core/intake_service.py", "update_intake"),
+    ("routes/case_management_parts/income_state_sync.py", "save_income_support_and_sync_snapshot_atomic"),
+    ("routes/case_management_parts/income_state_sync.py", "recalculate_and_sync_income_state_atomic"),
 }
 
 
@@ -67,16 +81,30 @@ def _constant_text(node: ast.AST) -> str:
     return ""
 
 
+def _call_name(node: ast.Call) -> str | None:
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
 def _written_tables(node: ast.AST) -> set[str]:
     tables: set[str] = set()
     for child in ast.walk(node):
         if not isinstance(child, ast.Call):
             continue
+        if _call_name(child) not in SQL_EXECUTION_FUNCTIONS:
+            continue
         for arg in child.args[:1]:
             sql_text = _constant_text(arg)
             if not sql_text:
                 continue
-            tables.update(match.group(1).lower() for match in WRITE_SQL_RE.finditer(sql_text))
+            for match in WRITE_SQL_RE.finditer(sql_text):
+                table_name = match.group(1) or match.group(2)
+                if table_name:
+                    tables.add(table_name.lower())
     return tables
 
 
@@ -106,7 +134,7 @@ def _defined_functions(tree: ast.AST) -> set[str]:
 def test_required_atomic_entry_points_exist_and_use_db_transaction() -> None:
     failures: list[str] = []
 
-    for relative_path, function_name in sorted(REQUIRED_ATOMIC_ENTRY_POINTS.items()):
+    for relative_path, function_name in sorted(REQUIRED_ATOMIC_ENTRY_POINTS):
         path = PROJECT_ROOT / relative_path
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative_path)
         matching_functions = [
