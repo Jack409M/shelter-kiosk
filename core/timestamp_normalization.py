@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from flask import g
+from flask import current_app, g, has_app_context
 
 from core.db import db_execute, db_fetchall, db_transaction
 from core.time_utils import utc_naive_iso
@@ -211,9 +211,16 @@ def _list_timestamp_targets_pg() -> list[tuple[str, str]]:
     return targets
 
 
+def _db_kind() -> str:
+    if has_app_context():
+        configured = current_app.config.get("DATABASE_MODE") or current_app.config.get("DB_KIND")
+        if configured:
+            return str(configured).strip().lower()
+    return str(g.get("db_kind") or "").strip().lower()
+
+
 def list_timestamp_targets() -> list[tuple[str, str]]:
-    kind = str(g.get("db_kind") or "").strip().lower()
-    if kind in POSTGRES_DB_KINDS:
+    if _db_kind() in POSTGRES_DB_KINDS:
         return _list_timestamp_targets_pg()
     return _list_timestamp_targets_sqlite()
 
