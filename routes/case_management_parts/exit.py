@@ -354,6 +354,17 @@ def _close_enrollment_and_resident(
         )
 
 
+def _save_exit_assessment_atomic(
+    *,
+    enrollment_id: int,
+    resident_id: int,
+    data: dict[str, Any],
+) -> None:
+    with db_transaction():
+        _upsert_exit_assessment(enrollment_id, data)
+        _close_enrollment_and_resident(enrollment_id, resident_id, data)
+
+
 def exit_assessment_form_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -421,9 +432,11 @@ def submit_exit_assessment_view(resident_id: int):
             form_data=request.form.to_dict(),
         )
 
-    with db_transaction():
-        _upsert_exit_assessment(enrollment_id, validated)
-        _close_enrollment_and_resident(enrollment_id, resident_id, validated)
+    _save_exit_assessment_atomic(
+        enrollment_id=enrollment_id,
+        resident_id=resident_id,
+        data=validated,
+    )
 
     flash("Exit assessment saved.", "success")
 
