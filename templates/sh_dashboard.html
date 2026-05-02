@@ -337,6 +337,8 @@
           <div style="margin-top:10px;"><button class="health-inline-button" onclick="openShModal('success')">View recent events</button></div>
         {% elif card.label == "Last Error" %}
           <div style="margin-top:10px;"><button class="health-inline-button" onclick="openShModal('error')">View recent errors</button></div>
+        {% elif card.label == "Backup System" %}
+          <div style="margin-top:10px;"><a class="health-inline-button" href="{{ url_for('admin.admin_backup_documentation') }}">Open Backup and Restore Guide</a></div>
         {% endif %}
       </div>
     {% endfor %}
