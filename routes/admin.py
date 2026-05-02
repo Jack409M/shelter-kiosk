@@ -7,7 +7,10 @@ from routes.admin_parts.audit import (
     staff_audit_log_csv_view,
     staff_audit_log_view,
 )
-from routes.admin_parts.backup_docs import admin_backup_documentation_view
+from routes.admin_parts.backup_docs import (
+    admin_backup_documentation_view,
+    save_backup_restore_notes_view,
+)
 from routes.admin_parts.dashboard import (
     admin_ban_ip_view,
     admin_dashboard_live_view,
@@ -136,6 +139,13 @@ def admin_break_test():
 @require_shelter
 def admin_backup_documentation():
     return admin_backup_documentation_view()
+
+
+@admin.post("/staff/admin/backup-documentation/save-notes")
+@require_login
+@require_shelter
+def save_backup_restore_notes():
+    return save_backup_restore_notes_view()
 
 
 @admin.post("/staff/admin/system-health/alerts/<int:alert_id>/acknowledge")
