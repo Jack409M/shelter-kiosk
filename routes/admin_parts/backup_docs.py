@@ -86,6 +86,10 @@ def save_backup_restore_notes_view():
         return redirect(url_for("admin.admin_backup_documentation"))
 
     validation_status = (request.form.get("validation_status") or "").strip()
+    if validation_status != "pass":
+        flash("Restore notes were not saved because validation status must be PASS.", "error")
+        return redirect(url_for("admin.admin_backup_documentation"))
+
     validation_run_id = (request.form.get("validation_run_id") or "").strip()
     validation_report_link = (request.form.get("validation_report_link") or "").strip()
     backup_sha256 = (request.form.get("backup_sha256") or "").strip()
