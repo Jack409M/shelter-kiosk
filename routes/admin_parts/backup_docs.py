@@ -1,8 +1,24 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.admin_rbac import require_admin_role
+from core.audit import log_action
+
+
+def _staff_user_id() -> int | None:
+    raw_staff_user_id = session.get("staff_user_id")
+    if raw_staff_user_id in (None, ""):
+        return None
+
+    try:
+        return int(raw_staff_user_id)
+    except (TypeError, ValueError):
+        current_app.logger.warning(
+            "Invalid staff_user_id in session for backup documentation route: %r",
+            raw_staff_user_id,
+        )
+        return None
 
 
 def admin_backup_documentation_view():
@@ -50,3 +66,26 @@ def admin_backup_documentation_view():
         daily_checklist=daily_checklist,
         recovery_steps=recovery_steps,
     )
+
+
+def save_backup_restore_notes_view():
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    notes = (request.form.get("restore_notes") or "").strip()
+    if not notes:
+        flash("Restore notes were not saved because the notes box was empty.", "warning")
+        return redirect(url_for("admin.admin_backup_documentation"))
+
+    log_action(
+        "backup_restore",
+        None,
+        None,
+        _staff_user_id(),
+        "restore_notes_saved",
+        {"notes": notes},
+    )
+
+    flash("Restore notes saved to the audit log.", "success")
+    return redirect(url_for("admin.admin_backup_documentation"))
