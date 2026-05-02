@@ -139,6 +139,32 @@
     color: #1f3550;
   }
 
+  .backup-validation-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .backup-validation-field label,
+  .backup-confirm-label {
+    display: block;
+    margin-top: 12px;
+    color: #1f3550;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .backup-validation-field input,
+  .backup-validation-field select {
+    width: 100%;
+    border: 1px solid #cfd9e3;
+    border-radius: 14px;
+    padding: 12px;
+    color: #1f3550;
+    background: #ffffff;
+  }
+
   .backup-confirm-box {
     width: 100%;
     border: 1px solid #cfd9e3;
@@ -156,14 +182,6 @@
   .backup-confirm-box.confirm-unlocked {
     border-color: #b8dfc5;
     background: #f5fff8;
-  }
-
-  .backup-confirm-label {
-    display: block;
-    margin-top: 12px;
-    color: #1f3550;
-    font-size: 13px;
-    font-weight: 800;
   }
 
   .backup-confirm-help {
@@ -187,7 +205,8 @@
   }
 
   @media (max-width: 900px) {
-    .backup-guide-shell {
+    .backup-guide-shell,
+    .backup-validation-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -288,6 +307,35 @@
           class="backup-note-box"
           placeholder="Backup date, backup source, validation result, tables checked, person approving restore, and follow up notes."
         ></textarea>
+
+        <h3 style="margin:14px 0 4px; color:#1f3550;">Validation Report Reference</h3>
+        <p class="backup-confirm-help">
+          Record the restore validation proof from GitHub Actions or a local disposable database test. Do not paste database credentials here.
+        </p>
+        <div class="backup-validation-grid">
+          <div class="backup-validation-field">
+            <label for="validation_status">Validation status</label>
+            <select id="validation_status" name="validation_status">
+              <option value="">Select status</option>
+              <option value="pass">PASS</option>
+              <option value="fail">FAIL</option>
+              <option value="not_run">Not run yet</option>
+            </select>
+          </div>
+          <div class="backup-validation-field">
+            <label for="validation_run_id">GitHub run ID or test reference</label>
+            <input id="validation_run_id" name="validation_run_id" autocomplete="off" placeholder="Example: 1777737408627">
+          </div>
+          <div class="backup-validation-field">
+            <label for="validation_report_link">Validation report link</label>
+            <input id="validation_report_link" name="validation_report_link" autocomplete="off" placeholder="GitHub Actions artifact or internal reference">
+          </div>
+          <div class="backup-validation-field">
+            <label for="backup_sha256">Backup SHA256</label>
+            <input id="backup_sha256" name="backup_sha256" autocomplete="off" placeholder="SHA256 from restore-validation-report.txt">
+          </div>
+        </div>
+
         <label class="backup-confirm-label" for="confirm_phrase">Confirmation phrase</label>
         <p class="backup-confirm-help">Type SAVE RESTORE NOTES to save these notes to the audit log.</p>
         <input
