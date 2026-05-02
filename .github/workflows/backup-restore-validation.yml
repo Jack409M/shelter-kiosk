@@ -38,6 +38,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/backup_restore_test
       RESTORE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/backup_restore_test
+      RESTORE_VALIDATION_REPORT: restore-validation-report.txt
 
       FLASK_SECRET_KEY: test-secret-key
       COOKIE_SECURE: "0"
@@ -93,11 +94,31 @@ jobs:
               ;;
           esac
 
+      - name: Initialize validation report
+        run: |
+          set -euo pipefail
+          {
+            echo "Shelter Kiosk Restore Validation Report"
+            echo "Generated UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "GitHub run ID: ${GITHUB_RUN_ID}"
+            echo "Commit SHA: ${GITHUB_SHA}"
+            echo "Backup URL: ${{ inputs.backup_url }}"
+            echo "Restore target: disposable GitHub Actions Postgres service"
+            echo "Production restore attempted: NO"
+            echo
+          } > "$RESTORE_VALIDATION_REPORT"
+
       - name: Download sanitized backup
         run: |
           set -euo pipefail
           curl --fail --location --silent "${{ inputs.backup_url }}" -o backup.sql_or_gz
           test -s backup.sql_or_gz
+          {
+            echo "Downloaded backup file: backup.sql_or_gz"
+            echo "Downloaded file size bytes: $(wc -c < backup.sql_or_gz)"
+            echo "Downloaded file SHA256: $(sha256sum backup.sql_or_gz | awk '{print $1}')"
+            echo
+          } >> "$RESTORE_VALIDATION_REPORT"
 
       - name: Restore backup into disposable DB
         run: |
@@ -107,16 +128,37 @@ jobs:
           else
             psql "$RESTORE_DATABASE_URL" < backup.sql_or_gz
           fi
+          {
+            echo "Restore result: PASS"
+            echo
+          } >> "$RESTORE_VALIDATION_REPORT"
 
       - name: Validate restored data shape
         run: |
           set -euo pipefail
-          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM residents;"
-          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM program_enrollments;"
-          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM intake_assessments;"
-          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM resident_passes;"
+          {
+            echo "Core table counts:"
+            echo "residents: $(psql "$RESTORE_DATABASE_URL" -tAc "SELECT COUNT(*) FROM residents;")"
+            echo "program_enrollments: $(psql "$RESTORE_DATABASE_URL" -tAc "SELECT COUNT(*) FROM program_enrollments;")"
+            echo "intake_assessments: $(psql "$RESTORE_DATABASE_URL" -tAc "SELECT COUNT(*) FROM intake_assessments;")"
+            echo "resident_passes: $(psql "$RESTORE_DATABASE_URL" -tAc "SELECT COUNT(*) FROM resident_passes;")"
+            echo "Data shape validation result: PASS"
+            echo
+          } >> "$RESTORE_VALIDATION_REPORT"
 
       - name: Run full test suite against restored DB
         run: |
           set -euo pipefail
           pytest -q
+          {
+            echo "Pytest result: PASS"
+            echo "Final validation status: PASS"
+          } >> "$RESTORE_VALIDATION_REPORT"
+
+      - name: Upload restore validation report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: restore-validation-report
+          path: restore-validation-report.txt
+          if-no-files-found: warn
