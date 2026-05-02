@@ -5,7 +5,7 @@ from typing import Any
 
 from flask import flash, redirect, render_template, request, session, url_for
 
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.exit_validation import validate_exit_form
@@ -421,8 +421,9 @@ def submit_exit_assessment_view(resident_id: int):
             form_data=request.form.to_dict(),
         )
 
-    _upsert_exit_assessment(enrollment_id, validated)
-    _close_enrollment_and_resident(enrollment_id, resident_id, validated)
+    with db_transaction():
+        _upsert_exit_assessment(enrollment_id, validated)
+        _close_enrollment_and_resident(enrollment_id, resident_id, validated)
 
     flash("Exit assessment saved.", "success")
 
