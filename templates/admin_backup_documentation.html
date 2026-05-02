@@ -134,6 +134,29 @@
     color: #1f3550;
   }
 
+  .backup-confirm-box {
+    width: 100%;
+    border: 1px solid #cfd9e3;
+    border-radius: 14px;
+    padding: 12px;
+    color: #1f3550;
+    margin-top: 12px;
+  }
+
+  .backup-confirm-label {
+    display: block;
+    margin-top: 12px;
+    color: #1f3550;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .backup-confirm-help {
+    margin: 6px 0 0;
+    color: #60758a;
+    font-size: 13px;
+  }
+
   @media (max-width: 900px) {
     .backup-guide-shell {
       grid-template-columns: 1fr;
@@ -236,6 +259,15 @@
           class="backup-note-box"
           placeholder="Backup date, backup source, validation result, tables checked, person approving restore, and follow up notes."
         ></textarea>
+        <label class="backup-confirm-label" for="confirm_phrase">Confirmation phrase</label>
+        <p class="backup-confirm-help">Type SAVE RESTORE NOTES to save these notes to the audit log.</p>
+        <input
+          id="confirm_phrase"
+          name="confirm_phrase"
+          class="backup-confirm-box"
+          autocomplete="off"
+          placeholder="SAVE RESTORE NOTES"
+        >
         <div class="backup-action-row">
           <button type="submit">Save Restore Notes</button>
           <a href="{{ url_for('admin.admin_system_health') }}">Return to System Health</a>
