@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from typing import Any
 
 from flask import current_app, g, has_app_context
 
 from core.db import db_execute, db_fetchall, db_fetchone
-
-
-def _now_iso() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
+from core.time_utils import utcnow_iso
 
 
 def _kind() -> str:
@@ -107,7 +103,7 @@ def log_sh_event(
             staff_id,
             str(message or "").strip(),
             metadata_text,
-            _now_iso(),
+            utcnow_iso(),
         ),
     )
 
