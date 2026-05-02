@@ -23,6 +23,7 @@ from . import (
     schema_people,
     schema_program,
     schema_requests,
+    schema_scheduler,
     schema_shelter_operations,
     schema_shelters,
 )
@@ -242,6 +243,7 @@ def _ensure_dependent_domain_tables(kind: str) -> None:
     schema_comms.ensure_tables(kind)
     NP_schema_placement.ensure_tables(kind)
     schema_admin.ensure_tables(kind)
+    schema_scheduler.ensure_tables(kind)
     rent_tracking_schema._ensure_tables()
 
 
@@ -275,6 +277,7 @@ def _ensure_indexes(kind: str) -> None:
     schema_comms.ensure_indexes(kind)
     NP_schema_placement.ensure_indexes()
     schema_admin.ensure_indexes()
+    schema_scheduler.ensure_indexes()
 
 
 def _ensure_bootstrap_tasks(kind: str) -> None:
