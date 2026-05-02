@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">Background Job Monitor</h1>
+  <p class="page-subtitle">Scheduler execution history with success, failure, and runtime visibility.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:16px;">
+  <a href="/staff/admin/system-health">Back to System Health</a>
+</div>
+
+<div class="card" style="margin-bottom:16px; display:flex; gap:20px;">
+  <div><strong>{{ summary.total }}</strong><br><small>Total Runs</small></div>
+  <div><strong>{{ summary.success }}</strong><br><small>Success</small></div>
+  <div><strong>{{ summary.error }}</strong><br><small>Errors</small></div>
+  <div><strong>{{ summary.running }}</strong><br><small>Running</small></div>
+</div>
+
+<div class="card">
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Job</th>
+          <th>Status</th>
+          <th>Duration (ms)</th>
+          <th>Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.started_at }}</td>
+          <td>{{ row.job_label or row.job_name }}</td>
+          <td>{{ row.status }}</td>
+          <td>{{ row.duration_ms or '' }}</td>
+          <td>
+            {{ row.result_summary or row.error_message }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">No job runs recorded yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
