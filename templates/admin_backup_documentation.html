@@ -148,6 +148,16 @@
     margin-top: 12px;
   }
 
+  .backup-confirm-box.confirm-locked {
+    border-color: #f0c7c3;
+    background: #fffafa;
+  }
+
+  .backup-confirm-box.confirm-unlocked {
+    border-color: #b8dfc5;
+    background: #f5fff8;
+  }
+
   .backup-confirm-label {
     display: block;
     margin-top: 12px;
@@ -164,9 +174,16 @@
 
   .backup-confirm-status {
     margin: 8px 0 0;
-    color: #9a6600;
     font-size: 13px;
     font-weight: 800;
+  }
+
+  .backup-confirm-status.confirm-locked {
+    color: #a7372f;
+  }
+
+  .backup-confirm-status.confirm-unlocked {
+    color: #1f7a3d;
   }
 
   @media (max-width: 900px) {
@@ -276,11 +293,11 @@
         <input
           id="confirm_phrase"
           name="confirm_phrase"
-          class="backup-confirm-box"
+          class="backup-confirm-box confirm-locked"
           autocomplete="off"
           placeholder="SAVE RESTORE NOTES"
         >
-        <p id="restore-confirm-status" class="backup-confirm-status">Save is locked until the confirmation phrase matches.</p>
+        <p id="restore-confirm-status" class="backup-confirm-status confirm-locked">Save is locked until the confirmation phrase matches.</p>
         <div class="backup-action-row">
           <button id="save-restore-notes-button" type="submit" disabled>Save Restore Notes</button>
           <a href="{{ url_for('admin.admin_system_health') }}">Return to System Health</a>
@@ -302,9 +319,22 @@
     return;
   }
 
+  function setConfirmState(matches) {
+    confirmInput.classList.toggle('confirm-unlocked', matches);
+    confirmInput.classList.toggle('confirm-locked', !matches);
+    statusText.classList.toggle('confirm-unlocked', matches);
+    statusText.classList.toggle('confirm-locked', !matches);
+  }
+
   function updateSaveState() {
+    const upperValue = confirmInput.value.toUpperCase();
+    if (confirmInput.value !== upperValue) {
+      confirmInput.value = upperValue;
+    }
+
     const matches = confirmInput.value.trim() === expectedPhrase;
     saveButton.disabled = !matches;
+    setConfirmState(matches);
     statusText.textContent = matches
       ? 'Confirmation phrase matched. Save is unlocked.'
       : 'Save is locked until the confirmation phrase matches.';
