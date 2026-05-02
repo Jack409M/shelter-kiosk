@@ -1,30 +1,17 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
-from zoneinfo import ZoneInfo
+
+from core.time_utils import CHICAGO_TZ as CHI
+from core.time_utils import to_chicago, utcnow_iso
 
 # ============================================================================
 # Timezone
 # ============================================================================
 
-CHI = ZoneInfo("America/Chicago")
 
-
-def _to_chi(dt: datetime | str | None) -> datetime | None:
-    if not dt:
-        return None
-
-    if isinstance(dt, str):
-        try:
-            dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
-        except Exception:
-            return None
-
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
-
-    return dt.astimezone(CHI)
+def _to_chi(dt):
+    return to_chicago(dt)
 
 
 # ============================================================================
@@ -70,10 +57,6 @@ def fmt_pretty_date(value) -> str:
 # ============================================================================
 # REQUIRED EXISTING FUNCTIONS (DO NOT REMOVE)
 # ============================================================================
-
-
-def utcnow_iso() -> str:
-    return datetime.now(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def is_postgres() -> bool:
