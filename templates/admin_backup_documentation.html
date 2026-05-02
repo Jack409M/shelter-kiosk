@@ -125,6 +125,11 @@
     cursor: pointer;
   }
 
+  .backup-action-row button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
   .backup-note-box {
     width: 100%;
     min-height: 120px;
@@ -155,6 +160,13 @@
     margin: 6px 0 0;
     color: #60758a;
     font-size: 13px;
+  }
+
+  .backup-confirm-status {
+    margin: 8px 0 0;
+    color: #9a6600;
+    font-size: 13px;
+    font-weight: 800;
   }
 
   @media (max-width: 900px) {
@@ -268,8 +280,9 @@
           autocomplete="off"
           placeholder="SAVE RESTORE NOTES"
         >
+        <p id="restore-confirm-status" class="backup-confirm-status">Save is locked until the confirmation phrase matches.</p>
         <div class="backup-action-row">
-          <button type="submit">Save Restore Notes</button>
+          <button id="save-restore-notes-button" type="submit" disabled>Save Restore Notes</button>
           <a href="{{ url_for('admin.admin_system_health') }}">Return to System Health</a>
           <button type="button" onclick="window.print()">Print Checklist</button>
         </div>
@@ -277,5 +290,29 @@
     </section>
   </main>
 </div>
+
+<script>
+(function () {
+  const expectedPhrase = 'SAVE RESTORE NOTES';
+  const confirmInput = document.getElementById('confirm_phrase');
+  const saveButton = document.getElementById('save-restore-notes-button');
+  const statusText = document.getElementById('restore-confirm-status');
+
+  if (!confirmInput || !saveButton || !statusText) {
+    return;
+  }
+
+  function updateSaveState() {
+    const matches = confirmInput.value.trim() === expectedPhrase;
+    saveButton.disabled = !matches;
+    statusText.textContent = matches
+      ? 'Confirmation phrase matched. Save is unlocked.'
+      : 'Save is locked until the confirmation phrase matches.';
+  }
+
+  confirmInput.addEventListener('input', updateSaveState);
+  updateSaveState();
+})();
+</script>
 
 {% endblock %}
