@@ -98,6 +98,24 @@ TWILIO_STATUS_CALLBACK_URL = env_text("TWILIO_STATUS_CALLBACK_URL")
 # Database runtime configuration
 # ------------------------------------------------------------
 
+LEGACY_DATABASE_ENV_VARS = {
+    "DB_USER",
+    "DB_PASSWORD",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_NAME",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_HOST",
+    "POSTGRES_PORT",
+    "POSTGRES_DB",
+    "PGUSER",
+    "PGPASSWORD",
+    "PGHOST",
+    "PGPORT",
+    "PGDATABASE",
+}
+
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -112,6 +130,29 @@ class RuntimeState:
 
 def _normalize_database_url(value: str | None) -> str:
     return str(value or "").strip()
+
+
+def _legacy_database_env_vars_present() -> list[str]:
+    return sorted(
+        name
+        for name in LEGACY_DATABASE_ENV_VARS
+        if str(os.environ.get(name) or "").strip()
+    )
+
+
+def _validate_database_env_contract(database_url: str) -> None:
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is required.")
+
+    legacy_vars = _legacy_database_env_vars_present()
+    if not legacy_vars:
+        return
+
+    joined_vars = ", ".join(legacy_vars)
+    raise RuntimeError(
+        "Only DATABASE_URL may be used for application database configuration. "
+        f"Remove these legacy or split database environment variables from the app service: {joined_vars}."
+    )
 
 
 def database_mode_label_from_url(database_url: str) -> str:
@@ -136,8 +177,7 @@ def load_runtime_config(*, explicit_database_url: str | None = None) -> RuntimeC
         else os.environ.get("DATABASE_URL")
     )
 
-    if not database_url:
-        raise RuntimeError("DATABASE_URL is required.")
+    _validate_database_env_contract(database_url)
 
     return RuntimeConfig(
         database_url=database_url,
@@ -219,8 +259,7 @@ def init_db() -> None:
         raise RuntimeError("init_db() requires an active Flask app context.")
 
     effective_database_url = current_database_url()
-    if not effective_database_url:
-        raise RuntimeError("DATABASE_URL is required before database initialization.")
+    _validate_database_env_contract(effective_database_url)
 
     current_app.config["DATABASE_URL"] = effective_database_url
     current_app.config["DATABASE_MODE_LABEL"] = database_mode_label_from_url(effective_database_url)
