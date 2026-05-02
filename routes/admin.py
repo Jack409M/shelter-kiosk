@@ -38,6 +38,7 @@ from routes.admin_parts.escalation_log import escalation_log_view
 from routes.admin_parts.field_audit import (
     admin_field_audit_view,
 )
+from routes.admin_parts.job_monitor import job_monitor_view
 from routes.admin_parts.pass_retention import (
     run_pass_cleanup,
 )
@@ -104,6 +105,13 @@ def admin_role_permissions():
 @require_shelter
 def admin_system_health():
     return system_health_dashboard_view()
+
+
+@admin.route("/staff/admin/system-health/job-monitor", methods=["GET"])
+@require_login
+@require_shelter
+def admin_job_monitor():
+    return job_monitor_view()
 
 
 @admin.route("/staff/admin/timestamp-cleanup", methods=["GET"])
