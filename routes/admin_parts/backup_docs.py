@@ -85,13 +85,24 @@ def save_backup_restore_notes_view():
         flash("Restore notes were not saved because the confirmation phrase did not match.", "error")
         return redirect(url_for("admin.admin_backup_documentation"))
 
+    validation_status = (request.form.get("validation_status") or "").strip()
+    validation_run_id = (request.form.get("validation_run_id") or "").strip()
+    validation_report_link = (request.form.get("validation_report_link") or "").strip()
+    backup_sha256 = (request.form.get("backup_sha256") or "").strip()
+
     log_action(
         "backup_restore",
         None,
         None,
         _staff_user_id(),
         "restore_notes_saved",
-        {"notes": notes},
+        {
+            "backup_sha256": backup_sha256,
+            "notes": notes,
+            "validation_report_link": validation_report_link,
+            "validation_run_id": validation_run_id,
+            "validation_status": validation_status,
+        },
     )
 
     flash("Restore notes saved to the audit log.", "success")
