@@ -20,6 +20,14 @@ SHELTER_LABELS = {
 
 
 @dataclass(slots=True)
+class RentReportPeriod:
+    start_date: date
+    end_date: date
+    year: int
+    label: str
+
+
+@dataclass(slots=True)
 class RentFinancialShelterRow:
     shelter: str
     shelter_label: str
@@ -46,6 +54,9 @@ class RentFinancialShelterRow:
 @dataclass(slots=True)
 class RentFinancialReport:
     year: int
+    period_start: str
+    period_end: str
+    period_label: str
     generated_at: str
     rows: list[RentFinancialShelterRow]
     totals: RentFinancialShelterRow
@@ -70,9 +81,67 @@ def clean_report_year(value: object | None) -> int:
     return year
 
 
+def _parse_iso_date(value: object | None) -> date | None:
+    try:
+        text = str(value or "").strip()
+        if not text:
+            return None
+        return date.fromisoformat(text)
+    except Exception:
+        return None
+
+
+def _period_label(start: date, end: date) -> str:
+    if start == date(start.year, 1, 1) and end == date(start.year, 12, 31):
+        return f"Year {start.year}"
+    if start.year == end.year:
+        return f"{start.strftime('%b %d')} to {end.strftime('%b %d, %Y')}"
+    return f"{start.strftime('%b %d, %Y')} to {end.strftime('%b %d, %Y')}"
+
+
+def clean_report_period(
+    *,
+    start_date_value: object | None = None,
+    end_date_value: object | None = None,
+    year_value: object | None = None,
+) -> RentReportPeriod:
+    year = clean_report_year(year_value)
+    start = _parse_iso_date(start_date_value)
+    end = _parse_iso_date(end_date_value)
+
+    if start is None and end is None:
+        start = date(year, 1, 1)
+        end = date(year, 12, 31)
+    elif start is None and end is not None:
+        start = date(end.year, 1, 1)
+    elif start is not None and end is None:
+        end = date(start.year, 12, 31)
+
+    assert start is not None
+    assert end is not None
+
+    if start > end:
+        start, end = end, start
+
+    if start.year < 2000 or end.year > 2100:
+        fallback_year = current_report_year()
+        start = date(fallback_year, 1, 1)
+        end = date(fallback_year, 12, 31)
+
+    return RentReportPeriod(
+        start_date=start,
+        end_date=end,
+        year=start.year,
+        label=_period_label(start, end),
+    )
+
+
 def report_to_dict(report: RentFinancialReport) -> dict:
     return {
         "year": report.year,
+        "period_start": report.period_start,
+        "period_end": report.period_end,
+        "period_label": report.period_label,
         "generated_at": report.generated_at,
         "rows": [asdict(row) for row in report.rows],
         "totals": asdict(report.totals),
@@ -113,12 +182,29 @@ def _shelter_label(key: str) -> str:
     return SHELTER_LABELS.get(key, key.title() if key else "Unknown")
 
 
-def _days_in_year(year: int) -> int:
-    return 366 if calendar.isleap(year) else 365
+def _month_key(year: int, month: int) -> int:
+    return (year * 100) + month
 
 
-def _capacity_days(year: int, shelter: str, capacities: dict[str, int]) -> int:
-    return int(capacities.get(shelter, 0) or 0) * _days_in_year(year)
+def _period_month_keys(period: RentReportPeriod) -> list[tuple[int, int]]:
+    months: list[tuple[int, int]] = []
+    current_year = period.start_date.year
+    current_month = period.start_date.month
+    while (current_year, current_month) <= (period.end_date.year, period.end_date.month):
+        months.append((current_year, current_month))
+        current_month += 1
+        if current_month == 13:
+            current_month = 1
+            current_year += 1
+    return months
+
+
+def _period_day_count(period: RentReportPeriod) -> int:
+    return (period.end_date - period.start_date).days + 1
+
+
+def _capacity_days(period: RentReportPeriod, shelter: str, capacities: dict[str, int]) -> int:
+    return int(capacities.get(shelter, 0) or 0) * _period_day_count(period)
 
 
 def _settings_float(settings: dict, key: str, fallback: float) -> float:
@@ -146,18 +232,26 @@ def _gratitude_level5_rate_for_unit(settings: dict, unit_type: str) -> float:
     return _settings_float(settings, "gh_level_5_two_bedroom_rent", 300.0)
 
 
-def _historical_abba_level4_rate(year: int) -> float:
+def _period_bounds(period: RentReportPeriod) -> tuple[int, int, str, str]:
+    month_start = _month_key(period.start_date.year, period.start_date.month)
+    month_end = _month_key(period.end_date.year, period.end_date.month)
+    return month_start, month_end, period.start_date.isoformat(), period.end_date.isoformat()
+
+
+def _historical_abba_level4_rate(period: RentReportPeriod) -> float:
+    month_start, month_end, _, _ = _period_bounds(period)
     rows = db_fetchall(
         """
         SELECT base_monthly_rent, prorated_charge, occupied_days, month_day_count
         FROM resident_rent_sheet_entries e
         JOIN resident_rent_sheets s ON s.id = e.sheet_id
-        WHERE s.rent_year = ?
+        WHERE ((s.rent_year * 100) + s.rent_month) >= ?
+          AND ((s.rent_year * 100) + s.rent_month) <= ?
           AND LOWER(COALESCE(s.shelter, '')) = ?
           AND COALESCE(e.level_snapshot, '') LIKE ?
           AND COALESCE(e.base_monthly_rent, 0) > 0
         """,
-        (year, "abba", "%4%"),
+        (month_start, month_end, "abba", "%4%"),
     )
     values = [_money(row.get("base_monthly_rent")) for row in rows or [] if _money(row.get("base_monthly_rent")) > 0]
     if values:
@@ -180,13 +274,13 @@ def _historical_abba_level4_rate(year: int) -> float:
     return 0.0
 
 
-def _minimal_monthly_rate_for_shelter(year: int, shelter: str, notes: list[str]) -> float:
+def _minimal_monthly_rate_for_shelter(period: RentReportPeriod, shelter: str, notes: list[str]) -> float:
     if shelter == "haven":
         settings = _load_settings("haven")
         return _settings_float(settings, "hh_rent_amount", 150.0)
 
     if shelter == "abba":
-        rate = _historical_abba_level4_rate(year)
+        rate = _historical_abba_level4_rate(period)
         if rate <= 0:
             notes.append("Abba Level 4 rent was not found in rent sheets or rent configs; minimal capacity rent is shown as 0 until configured.")
         return rate
@@ -194,18 +288,20 @@ def _minimal_monthly_rate_for_shelter(year: int, shelter: str, notes: list[str])
     return 0.0
 
 
-def _gratitude_known_unit_rates(year: int, notes: list[str], capacity: int) -> list[float]:
+def _gratitude_known_unit_rates(period: RentReportPeriod, notes: list[str], capacity: int) -> list[float]:
     settings = _load_settings("gratitude")
+    month_start, month_end, _, _ = _period_bounds(period)
     rows = db_fetchall(
         """
         SELECT DISTINCT apartment_number_snapshot, apartment_size_snapshot
         FROM resident_rent_sheet_entries e
         JOIN resident_rent_sheets s ON s.id = e.sheet_id
-        WHERE s.rent_year = ?
+        WHERE ((s.rent_year * 100) + s.rent_month) >= ?
+          AND ((s.rent_year * 100) + s.rent_month) <= ?
           AND LOWER(COALESCE(s.shelter, '')) = ?
           AND COALESCE(e.apartment_number_snapshot, '') <> ''
         """,
-        (year, "gratitude"),
+        (month_start, month_end, "gratitude"),
     )
 
     rates: list[float] = []
@@ -232,17 +328,19 @@ def _gratitude_known_unit_rates(year: int, notes: list[str], capacity: int) -> l
     return rates
 
 
-def _minimal_capacity_rent(year: int, shelter: str, notes: list[str], capacities: dict[str, int]) -> float:
+def _minimal_capacity_rent(period: RentReportPeriod, shelter: str, notes: list[str], capacities: dict[str, int]) -> float:
     capacity = int(capacities.get(shelter, 0) or 0)
+    month_count = len(_period_month_keys(period))
 
     if shelter == "gratitude":
-        return round(sum(rate * 12 for rate in _gratitude_known_unit_rates(year, notes, capacity)), 2)
+        return round(sum(rate * month_count for rate in _gratitude_known_unit_rates(period, notes, capacity)), 2)
 
-    monthly_rate = _minimal_monthly_rate_for_shelter(year, shelter, notes)
-    return round(monthly_rate * capacity * 12, 2)
+    monthly_rate = _minimal_monthly_rate_for_shelter(period, shelter, notes)
+    return round(monthly_rate * capacity * month_count, 2)
 
 
-def _actual_charges_by_shelter(year: int) -> dict[str, dict]:
+def _actual_charges_by_shelter(period: RentReportPeriod) -> dict[str, dict]:
+    month_start, month_end, _, _ = _period_bounds(period)
     rows = db_fetchall(
         """
         SELECT
@@ -252,15 +350,17 @@ def _actual_charges_by_shelter(year: int) -> dict[str, dict]:
             COUNT(*) AS charged_entry_count
         FROM resident_rent_sheet_entries e
         JOIN resident_rent_sheets s ON s.id = e.sheet_id
-        WHERE s.rent_year = ?
+        WHERE ((s.rent_year * 100) + s.rent_month) >= ?
+          AND ((s.rent_year * 100) + s.rent_month) <= ?
         GROUP BY LOWER(COALESCE(s.shelter, ''))
         """,
-        (year,),
+        (month_start, month_end),
     )
     return {_shelter_key(row.get("shelter")): dict(row) for row in rows or []}
 
 
-def _credits_by_shelter(year: int) -> dict[str, dict]:
+def _credits_by_shelter(period: RentReportPeriod) -> dict[str, dict]:
+    _, _, start_text, end_text = _period_bounds(period)
     rows = db_fetchall(
         """
         SELECT
@@ -275,7 +375,7 @@ def _credits_by_shelter(year: int) -> dict[str, dict]:
           AND COALESCE(voided, FALSE) = FALSE
         GROUP BY LOWER(COALESCE(shelter, ''))
         """,
-        (f"{year:04d}-01-01", f"{year:04d}-12-31"),
+        (start_text, end_text),
     )
     return {_shelter_key(row.get("shelter")): dict(row) for row in rows or []}
 
@@ -293,8 +393,8 @@ def _month_sequence_ending(year: int, month: int, count: int = 12) -> list[tuple
     return list(reversed(values))
 
 
-def _rolling_twelve_month_trend(year: int) -> list[dict]:
-    months = _month_sequence_ending(year, 12, 12)
+def _rolling_twelve_month_trend(period: RentReportPeriod) -> list[dict]:
+    months = _month_sequence_ending(period.end_date.year, period.end_date.month, 12)
     first_year, first_month = months[0]
     last_year, last_month = months[-1]
     start_date = f"{first_year:04d}-{first_month:02d}-01"
@@ -359,25 +459,29 @@ def _rolling_twelve_month_trend(year: int) -> list[dict]:
     return output
 
 
-def _monthly_rows(year: int) -> list[dict]:
+def _monthly_rows(period: RentReportPeriod) -> list[dict]:
+    month_start, month_end, start_text, end_text = _period_bounds(period)
     charge_rows = db_fetchall(
         """
         SELECT
             LOWER(COALESCE(s.shelter, '')) AS shelter,
+            s.rent_year AS year,
             s.rent_month AS month,
             COALESCE(SUM(COALESCE(e.prorated_charge, e.current_charge, 0)), 0) AS actual_charged_rent,
             COALESCE(SUM(COALESCE(e.occupied_days, 0)), 0) AS occupied_days
         FROM resident_rent_sheet_entries e
         JOIN resident_rent_sheets s ON s.id = e.sheet_id
-        WHERE s.rent_year = ?
-        GROUP BY LOWER(COALESCE(s.shelter, '')), s.rent_month
+        WHERE ((s.rent_year * 100) + s.rent_month) >= ?
+          AND ((s.rent_year * 100) + s.rent_month) <= ?
+        GROUP BY LOWER(COALESCE(s.shelter, '')), s.rent_year, s.rent_month
         """,
-        (year,),
+        (month_start, month_end),
     )
     credit_rows = db_fetchall(
         """
         SELECT
             LOWER(COALESCE(shelter, '')) AS shelter,
+            CAST(SUBSTR(entry_date, 1, 4) AS INTEGER) AS year,
             CAST(SUBSTR(entry_date, 6, 2) AS INTEGER) AS month,
             COALESCE(SUM(CASE WHEN entry_type = 'payment' THEN COALESCE(credit_amount, 0) ELSE 0 END), 0) AS cash_collected,
             COALESCE(SUM(CASE WHEN source_code = 'manual_credit_work_credit' THEN COALESCE(credit_amount, 0) ELSE 0 END), 0) AS work_credit
@@ -385,27 +489,28 @@ def _monthly_rows(year: int) -> list[dict]:
         WHERE entry_date >= ?
           AND entry_date <= ?
           AND COALESCE(voided, FALSE) = FALSE
-        GROUP BY LOWER(COALESCE(shelter, '')), CAST(SUBSTR(entry_date, 6, 2) AS INTEGER)
+        GROUP BY LOWER(COALESCE(shelter, '')), CAST(SUBSTR(entry_date, 1, 4) AS INTEGER), CAST(SUBSTR(entry_date, 6, 2) AS INTEGER)
         """,
-        (f"{year:04d}-01-01", f"{year:04d}-12-31"),
+        (start_text, end_text),
     )
 
-    charges = {(_shelter_key(row.get("shelter")), _int(row.get("month"))): dict(row) for row in charge_rows or []}
-    credits = {(_shelter_key(row.get("shelter")), _int(row.get("month"))): dict(row) for row in credit_rows or []}
+    charges = {(_shelter_key(row.get("shelter")), _int(row.get("year")), _int(row.get("month"))): dict(row) for row in charge_rows or []}
+    credits = {(_shelter_key(row.get("shelter")), _int(row.get("year")), _int(row.get("month"))): dict(row) for row in credit_rows or []}
     output: list[dict] = []
 
-    for month in range(1, 13):
+    for month_year, month_number in _period_month_keys(period):
         for shelter in SHELTER_ORDER:
-            charge = charges.get((shelter, month), {})
-            credit = credits.get((shelter, month), {})
+            charge = charges.get((shelter, month_year, month_number), {})
+            credit = credits.get((shelter, month_year, month_number), {})
             actual_charged = _money(charge.get("actual_charged_rent"))
             cash = _money(credit.get("cash_collected"))
             work = _money(credit.get("work_credit"))
             total_applied = round(cash + work, 2)
             output.append(
                 {
-                    "month": month,
-                    "month_label": date(year, month, 1).strftime("%B"),
+                    "year": month_year,
+                    "month": month_number,
+                    "month_label": date(month_year, month_number, 1).strftime("%B %Y"),
                     "shelter": shelter,
                     "shelter_label": _shelter_label(shelter),
                     "actual_charged_rent": actual_charged,
@@ -427,7 +532,7 @@ def _historic_capacity_rent(minimal_capacity: float, actual_charged: float, occu
     return round(daily_actual_average * capacity_days, 2)
 
 
-def _build_total_row(year: int, rows: list[RentFinancialShelterRow]) -> RentFinancialShelterRow:
+def _build_total_row(rows: list[RentFinancialShelterRow]) -> RentFinancialShelterRow:
     minimal = round(sum(row.minimal_capacity_rent for row in rows), 2)
     historic = round(sum(row.historic_capacity_rent for row in rows), 2)
     charged = round(sum(row.actual_charged_rent for row in rows), 2)
@@ -461,18 +566,21 @@ def _build_total_row(year: int, rows: list[RentFinancialShelterRow]) -> RentFina
     )
 
 
-def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
+def build_rent_financial_performance_report(year: int | None = None, *, period: RentReportPeriod | None = None) -> RentFinancialReport:
+    if period is None:
+        period = clean_report_period(year_value=year)
+
     capacities = load_shelter_capacities()
-    actual_by_shelter = _actual_charges_by_shelter(year)
-    credits_by_shelter = _credits_by_shelter(year)
+    actual_by_shelter = _actual_charges_by_shelter(period)
+    credits_by_shelter = _credits_by_shelter(period)
     rows: list[RentFinancialShelterRow] = []
 
     for shelter in SHELTER_ORDER:
         notes: list[str] = []
         actual = actual_by_shelter.get(shelter, {})
         credits = credits_by_shelter.get(shelter, {})
-        capacity_days = _capacity_days(year, shelter, capacities)
-        minimal_capacity = _minimal_capacity_rent(year, shelter, notes, capacities)
+        capacity_days = _capacity_days(period, shelter, capacities)
+        minimal_capacity = _minimal_capacity_rent(period, shelter, notes, capacities)
         actual_charged = _money(actual.get("actual_charged_rent"))
         occupied_days = min(_int(actual.get("occupied_days")), capacity_days) if capacity_days else 0
         vacant_days = max(capacity_days - occupied_days, 0)
@@ -512,31 +620,38 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
         )
 
     definitions = [
-        {"term": "Minimal Capacity Rent", "definition": "Conservative annual rent capacity floor using configured shelter capacity, Haven base rent, Abba Level 4 rent, and Gratitude Level 5 rent by unit type."},
-        {"term": "Historic Capacity Rent", "definition": "Actual average charged rent per occupied day multiplied by full annual capacity days."},
-        {"term": "Actual Charged Rent", "definition": "Sum of actual rent sheet charges for occupied residents."},
-        {"term": "Cash Collected", "definition": "Non-voided rent ledger payments only. This is actual money received."},
+        {"term": "Minimal Capacity Rent", "definition": "Conservative rent capacity floor for the selected period using configured shelter capacity, Haven base rent, Abba Level 4 rent, and Gratitude Level 5 rent by unit type."},
+        {"term": "Historic Capacity Rent", "definition": "Actual average charged rent per occupied day multiplied by selected period capacity days."},
+        {"term": "Actual Charged Rent", "definition": "Sum of actual rent sheet charges for occupied residents during the selected period."},
+        {"term": "Cash Collected", "definition": "Non-voided rent ledger payments during the selected period. This is actual money received."},
         {"term": "Work Credit (Program Approved Rent Offset)", "definition": "Non-voided rent ledger credits with source code manual_credit_work_credit. This is approved labor applied instead of a cash rent payment."},
         {"term": "Total Rent Applied", "definition": "Cash collected plus program approved work credit applied toward rent."},
         {"term": "Vacancy Loss (Unoccupied Capacity)", "definition": "Minimal capacity rent minus actual charged rent. This is conservative and separates unoccupied capacity from unpaid rent."},
-        {"term": "Vacancy Percentage", "definition": "Vacant capacity days divided by configured total capacity days."},
+        {"term": "Vacancy Percentage", "definition": "Vacant capacity days divided by configured total capacity days for the selected period."},
         {"term": "Unpaid Rent (After Credits)", "definition": "Actual charged rent minus cash collected and program approved work credit."},
         {"term": "Rent Collection Rate", "definition": "Cash collected divided by actual charged rent. This is a rent collection measure, not a resident recovery outcome measure."},
     ]
 
     return RentFinancialReport(
-        year=year,
+        year=period.year,
+        period_start=period.start_date.isoformat(),
+        period_end=period.end_date.isoformat(),
+        period_label=period.label,
         generated_at=datetime.now(CHICAGO_TZ).replace(microsecond=0).isoformat(),
         rows=rows,
-        totals=_build_total_row(year, rows),
-        monthly_rows=_monthly_rows(year),
-        twelve_month_trend=_rolling_twelve_month_trend(year),
+        totals=_build_total_row(rows),
+        monthly_rows=_monthly_rows(period),
+        twelve_month_trend=_rolling_twelve_month_trend(period),
         definitions=definitions,
     )
 
 
-def build_rent_resident_drilldown(*, year: int, shelter: str) -> dict:
+def build_rent_resident_drilldown(*, year: int | None = None, shelter: str, period: RentReportPeriod | None = None) -> dict:
+    if period is None:
+        period = clean_report_period(year_value=year)
+
     shelter_key = _shelter_key(shelter)
+    month_start, month_end, start_text, end_text = _period_bounds(period)
     rows = db_fetchall(
         """
         SELECT
@@ -548,12 +663,13 @@ def build_rent_resident_drilldown(*, year: int, shelter: str) -> dict:
         FROM residents r
         JOIN resident_rent_sheet_entries e ON e.resident_id = r.id
         JOIN resident_rent_sheets s ON s.id = e.sheet_id
-        WHERE s.rent_year = ?
+        WHERE ((s.rent_year * 100) + s.rent_month) >= ?
+          AND ((s.rent_year * 100) + s.rent_month) <= ?
           AND LOWER(COALESCE(s.shelter, '')) = ?
         GROUP BY r.id, r.first_name, r.last_name
         ORDER BY r.last_name ASC, r.first_name ASC, r.id ASC
         """,
-        (year, shelter_key),
+        (month_start, month_end, shelter_key),
     )
     credit_rows = db_fetchall(
         """
@@ -568,7 +684,7 @@ def build_rent_resident_drilldown(*, year: int, shelter: str) -> dict:
           AND COALESCE(voided, FALSE) = FALSE
         GROUP BY resident_id
         """,
-        (f"{year:04d}-01-01", f"{year:04d}-12-31", shelter_key),
+        (start_text, end_text, shelter_key),
     )
     credits = {int(row.get("resident_id")): dict(row) for row in credit_rows or []}
     output_rows: list[dict] = []
@@ -603,7 +719,10 @@ def build_rent_resident_drilldown(*, year: int, shelter: str) -> dict:
     }
 
     return {
-        "year": year,
+        "year": period.year,
+        "period_start": period.start_date.isoformat(),
+        "period_end": period.end_date.isoformat(),
+        "period_label": period.label,
         "shelter": shelter_key,
         "shelter_label": _shelter_label(shelter_key),
         "rows": output_rows,
