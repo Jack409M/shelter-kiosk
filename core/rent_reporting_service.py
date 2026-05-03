@@ -54,6 +54,7 @@ class RentFinancialReport:
     rows: list[RentFinancialShelterRow]
     totals: RentFinancialShelterRow
     monthly_rows: list[dict]
+    twelve_month_trend: list[dict]
     definitions: list[dict[str, str]]
 
 
@@ -80,6 +81,7 @@ def report_to_dict(report: RentFinancialReport) -> dict:
         "rows": [asdict(row) for row in report.rows],
         "totals": asdict(report.totals),
         "monthly_rows": report.monthly_rows,
+        "twelve_month_trend": report.twelve_month_trend,
         "definitions": report.definitions,
     }
 
@@ -281,6 +283,85 @@ def _credits_by_shelter(year: int) -> dict[str, dict]:
     return {_shelter_key(row.get("shelter")): dict(row) for row in rows or []}
 
 
+def _month_sequence_ending(year: int, month: int, count: int = 12) -> list[tuple[int, int]]:
+    values: list[tuple[int, int]] = []
+    y = year
+    m = month
+    for _ in range(count):
+        values.append((y, m))
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return list(reversed(values))
+
+
+def _rolling_twelve_month_trend(year: int) -> list[dict]:
+    months = _month_sequence_ending(year, 12, 12)
+    first_year, first_month = months[0]
+    last_year, last_month = months[-1]
+    start_date = f"{first_year:04d}-{first_month:02d}-01"
+    end_day = calendar.monthrange(last_year, last_month)[1]
+    end_date = f"{last_year:04d}-{last_month:02d}-{end_day:02d}"
+
+    charge_rows = db_fetchall(
+        """
+        SELECT
+            s.rent_year AS year,
+            s.rent_month AS month,
+            COALESCE(SUM(COALESCE(e.prorated_charge, e.current_charge, 0)), 0) AS actual_charged_rent
+        FROM resident_rent_sheet_entries e
+        JOIN resident_rent_sheets s ON s.id = e.sheet_id
+        WHERE (s.rent_year > ? OR (s.rent_year = ? AND s.rent_month >= ?))
+          AND (s.rent_year < ? OR (s.rent_year = ? AND s.rent_month <= ?))
+        GROUP BY s.rent_year, s.rent_month
+        """,
+        (first_year, first_year, first_month, last_year, last_year, last_month),
+    )
+    credit_rows = db_fetchall(
+        """
+        SELECT
+            CAST(SUBSTR(entry_date, 1, 4) AS INTEGER) AS year,
+            CAST(SUBSTR(entry_date, 6, 2) AS INTEGER) AS month,
+            COALESCE(SUM(CASE WHEN entry_type = 'payment' THEN COALESCE(credit_amount, 0) ELSE 0 END), 0) AS cash_collected,
+            COALESCE(SUM(CASE WHEN source_code = 'manual_credit_work_credit' THEN COALESCE(credit_amount, 0) ELSE 0 END), 0) AS work_credit
+        FROM resident_rent_ledger_entries
+        WHERE entry_date >= ?
+          AND entry_date <= ?
+          AND COALESCE(voided, FALSE) = FALSE
+        GROUP BY CAST(SUBSTR(entry_date, 1, 4) AS INTEGER), CAST(SUBSTR(entry_date, 6, 2) AS INTEGER)
+        """,
+        (start_date, end_date),
+    )
+    charges = {(_int(row.get("year")), _int(row.get("month"))): dict(row) for row in charge_rows or []}
+    credits = {(_int(row.get("year")), _int(row.get("month"))): dict(row) for row in credit_rows or []}
+    output: list[dict] = []
+
+    for month_year, month_number in months:
+        charge = charges.get((month_year, month_number), {})
+        credit = credits.get((month_year, month_number), {})
+        actual_charged = _money(charge.get("actual_charged_rent"))
+        cash = _money(credit.get("cash_collected"))
+        work = _money(credit.get("work_credit"))
+        total_applied = round(cash + work, 2)
+        unpaid = round(actual_charged - total_applied, 2)
+        output.append(
+            {
+                "year": month_year,
+                "month": month_number,
+                "label": date(month_year, month_number, 1).strftime("%b %Y"),
+                "short_label": date(month_year, month_number, 1).strftime("%b"),
+                "actual_charged_rent": actual_charged,
+                "cash_collected": cash,
+                "work_credit": work,
+                "total_recovered": total_applied,
+                "unrecovered_charged_rent": unpaid,
+            }
+        )
+
+    return output
+
+
 def _monthly_rows(year: int) -> list[dict]:
     charge_rows = db_fetchall(
         """
@@ -450,6 +531,7 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
         rows=rows,
         totals=_build_total_row(year, rows),
         monthly_rows=_monthly_rows(year),
+        twelve_month_trend=_rolling_twelve_month_trend(year),
         definitions=definitions,
     )
 
