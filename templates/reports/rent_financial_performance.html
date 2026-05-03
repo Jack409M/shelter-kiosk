@@ -1,218 +1,52 @@
 {% extends "layout.html" %}
 {% block content %}
 <style>
-  .rent-dashboard {
-    display: grid;
-    gap: 16px;
-  }
-  .rent-hero {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 18px;
-    align-items: start;
-    padding: 22px;
-    border: 1px solid rgba(23, 50, 77, .22);
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(239,247,252,.92));
-    box-shadow: 0 8px 24px rgba(13, 36, 57, .08);
-  }
-  .rent-eyebrow {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: #3b647f;
-    margin-bottom: 6px;
-  }
-  .rent-title {
-    margin: 0;
-    font-size: 28px;
-    line-height: 1.15;
-    color: #102a43;
-  }
-  .rent-subtitle {
-    margin-top: 8px;
-    max-width: 780px;
-    font-size: 13px;
-    line-height: 1.45;
-    color: #536778;
-  }
-  .rent-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-  .rent-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-  }
-  .rent-kpi {
-    padding: 16px;
-    border: 1px solid rgba(23, 50, 77, .16);
-    border-radius: 16px;
-    background: rgba(255,255,255,.92);
-    box-shadow: 0 4px 14px rgba(13, 36, 57, .05);
-  }
-  .rent-kpi-label {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: #64748b;
-  }
-  .rent-kpi-value {
-    margin-top: 7px;
-    font-size: 25px;
-    font-weight: 850;
-    color: #102a43;
-  }
-  .rent-kpi-note {
-    margin-top: 4px;
-    font-size: 12px;
-    color: #64748b;
-  }
+  .rent-dashboard { display: grid; gap: 16px; }
+  .rent-hero { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: start; padding: 22px; border: 1px solid rgba(23, 50, 77, .22); border-radius: 18px; background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(239,247,252,.92)); box-shadow: 0 8px 24px rgba(13, 36, 57, .08); }
+  .rent-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #3b647f; margin-bottom: 6px; }
+  .rent-title { margin: 0; font-size: 28px; line-height: 1.15; color: #102a43; }
+  .rent-subtitle { margin-top: 8px; max-width: 780px; font-size: 13px; line-height: 1.45; color: #536778; }
+  .rent-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .rent-filter-panel { padding: 16px; border: 1px solid rgba(23, 50, 77, .18); border-radius: 18px; background: rgba(255,255,255,.9); box-shadow: 0 6px 20px rgba(13, 36, 57, .06); }
+  .rent-filter-grid { display: grid; grid-template-columns: repeat(2, minmax(190px, 240px)) auto; gap: 12px; align-items: end; }
+  .rent-filter-field label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 800; color: #17324d; }
+  .rent-filter-field input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #b9c2cc; border-radius: 10px; background: #fff; }
+  .rent-preset-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .rent-preset-row button { border: 1px solid rgba(23, 50, 77, .22); border-radius: 999px; background: #fff; color: #17324d; padding: 8px 12px; font-weight: 800; cursor: pointer; }
+  .rent-preset-row button:hover { background: rgba(47, 127, 171, .10); }
+  .rent-period-pill { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(47, 127, 171, .12); color: #17324d; font-size: 12px; font-weight: 850; }
+  .rent-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .rent-kpi { padding: 16px; border: 1px solid rgba(23, 50, 77, .16); border-radius: 16px; background: rgba(255,255,255,.92); box-shadow: 0 4px 14px rgba(13, 36, 57, .05); }
+  .rent-kpi-label { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #64748b; }
+  .rent-kpi-value { margin-top: 7px; font-size: 25px; font-weight: 850; color: #102a43; }
+  .rent-kpi-note { margin-top: 4px; font-size: 12px; color: #64748b; }
   .rent-kpi.good { border-left: 5px solid #1f7a4f; }
   .rent-kpi.warn { border-left: 5px solid #b7791f; }
   .rent-kpi.bad { border-left: 5px solid #9b2c2c; }
-  .rent-insight {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 12px;
-    align-items: center;
-    padding: 14px 16px;
-    border-radius: 16px;
-    border: 1px solid rgba(155, 44, 44, .22);
-    background: rgba(255, 245, 245, .82);
-    color: #512222;
-  }
-  .rent-insight-icon {
-    width: 34px;
-    height: 34px;
-    display: grid;
-    place-items: center;
-    border-radius: 999px;
-    background: rgba(155, 44, 44, .12);
-    font-weight: 900;
-  }
-  .rent-panel {
-    padding: 18px;
-    border: 1px solid rgba(23, 50, 77, .18);
-    border-radius: 18px;
-    background: rgba(255,255,255,.88);
-    box-shadow: 0 6px 20px rgba(13, 36, 57, .06);
-  }
-  .rent-panel-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: flex-start;
-    margin-bottom: 14px;
-  }
-  .rent-panel h2 {
-    margin: 0;
-    color: #102a43;
-    font-size: 19px;
-  }
-  .rent-panel-subtitle {
-    margin-top: 4px;
-    font-size: 13px;
-    color: #64748b;
-  }
-  .rent-table-wrap {
-    overflow-x: auto;
-    border-radius: 14px;
-    border: 1px solid rgba(23, 50, 77, .12);
-  }
-  .rent-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    background: #fff;
-  }
-  .rent-table th {
-    padding: 11px 10px;
-    text-align: left;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #ffffff;
-    background: #2f7fab;
-    white-space: nowrap;
-  }
-  .rent-table td {
-    padding: 11px 10px;
-    border-bottom: 1px solid rgba(15, 52, 79, .10);
-    color: #17324d;
-    white-space: nowrap;
-  }
-  .rent-table tbody tr:hover {
-    background: rgba(47, 127, 171, .06);
-  }
-  .rent-table tfoot td {
-    font-weight: 850;
-    background: rgba(47, 127, 171, .10);
-  }
-  .rent-rate-pill {
-    display: inline-flex;
-    min-width: 58px;
-    justify-content: center;
-    padding: 4px 9px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 850;
-  }
+  .rent-insight { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(155, 44, 44, .22); background: rgba(255, 245, 245, .82); color: #512222; }
+  .rent-insight-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: rgba(155, 44, 44, .12); font-weight: 900; }
+  .rent-panel { padding: 18px; border: 1px solid rgba(23, 50, 77, .18); border-radius: 18px; background: rgba(255,255,255,.88); box-shadow: 0 6px 20px rgba(13, 36, 57, .06); }
+  .rent-panel-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+  .rent-panel h2 { margin: 0; color: #102a43; font-size: 19px; }
+  .rent-panel-subtitle { margin-top: 4px; font-size: 13px; color: #64748b; }
+  .rent-table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid rgba(23, 50, 77, .12); }
+  .rent-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+  .rent-table th { padding: 11px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #ffffff; background: #2f7fab; white-space: nowrap; }
+  .rent-table td { padding: 11px 10px; border-bottom: 1px solid rgba(15, 52, 79, .10); color: #17324d; white-space: nowrap; }
+  .rent-table tbody tr:hover { background: rgba(47, 127, 171, .06); }
+  .rent-table tfoot td { font-weight: 850; background: rgba(47, 127, 171, .10); }
+  .rent-rate-pill { display: inline-flex; min-width: 58px; justify-content: center; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 850; }
   .rent-rate-good { background: #e8f7ee; color: #16613d; }
   .rent-rate-warn { background: #fff7df; color: #8a5a05; }
   .rent-rate-bad { background: #fff0f0; color: #8d1f1f; }
-  .rent-chart-wrap {
-    margin-top: 10px;
-    border: 1px solid rgba(15, 52, 79, .10);
-    border-radius: 16px;
-    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,250,253,.95));
-    padding: 14px;
-    overflow-x: auto;
-  }
-  .rent-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    margin-top: 10px;
-    font-size: 12px;
-    color: #536778;
-  }
-  .rent-detail-toggle {
-    margin-top: 10px;
-  }
-  details.rent-detail-toggle summary {
-    cursor: pointer;
-    font-weight: 800;
-    color: #17324d;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(47, 127, 171, .10);
-  }
-  .rent-definitions {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-  }
-  .rent-definition-item {
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(47, 127, 171, .07);
-    font-size: 13px;
-    color: #334155;
-  }
-  @media (max-width: 980px) {
-    .rent-hero { grid-template-columns: 1fr; }
-    .rent-actions { justify-content: flex-start; }
-    .rent-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-  @media (max-width: 640px) {
-    .rent-kpi-grid { grid-template-columns: 1fr; }
-  }
+  .rent-chart-wrap { margin-top: 10px; border: 1px solid rgba(15, 52, 79, .10); border-radius: 16px; background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,250,253,.95)); padding: 14px; overflow-x: auto; }
+  .rent-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: #536778; }
+  .rent-detail-toggle { margin-top: 10px; }
+  details.rent-detail-toggle summary { cursor: pointer; font-weight: 800; color: #17324d; padding: 10px 12px; border-radius: 12px; background: rgba(47, 127, 171, .10); }
+  .rent-definitions { display: grid; gap: 8px; margin: 0; }
+  .rent-definition-item { padding: 10px 12px; border-radius: 12px; background: rgba(47, 127, 171, .07); font-size: 13px; color: #334155; }
+  @media (max-width: 980px) { .rent-hero { grid-template-columns: 1fr; } .rent-actions { justify-content: flex-start; } .rent-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rent-filter-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .rent-kpi-grid { grid-template-columns: 1fr; } }
 </style>
 
 <div class="cmx-page">
@@ -232,14 +66,42 @@
         <div class="rent-eyebrow">Financial accountability report</div>
         <h1 class="rent-title">Rent Collection Performance</h1>
         <div class="rent-subtitle">
-          Year {{ report.year }}. This page measures rent collection performance inside the program. It is not a measure of resident recovery or program success.
+          {{ report.period_label }}. This page measures rent collection performance inside the program. It is not a measure of resident recovery or program success.
         </div>
       </div>
       <div class="rent-actions">
+        <span class="rent-period-pill">{{ report.period_start }} to {{ report.period_end }}</span>
         <a class="cmx-btn-muted" href="{{ url_for('reports.reports_index') }}">Reports</a>
-        <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_board_export', year=report.year) }}">Board View</a>
-        <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_csv_export', year=report.year) }}">Export CSV</a>
+        <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_board_export', start_date=report.period_start, end_date=report.period_end) }}">Board View</a>
+        <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_csv_export', start_date=report.period_start, end_date=report.period_end) }}">Export CSV</a>
       </div>
+    </section>
+
+    <section class="rent-filter-panel">
+      <form id="rent-range-form" method="get" action="{{ url_for('reports_rent_financial.rent_financial_performance') }}">
+        <div class="rent-filter-grid">
+          <div class="rent-filter-field">
+            <label for="rent-start-date">Start Date</label>
+            <input id="rent-start-date" type="date" name="start_date" value="{{ report.period_start }}">
+          </div>
+          <div class="rent-filter-field">
+            <label for="rent-end-date">End Date</label>
+            <input id="rent-end-date" type="date" name="end_date" value="{{ report.period_end }}">
+          </div>
+          <div class="rent-actions" style="justify-content:flex-start;">
+            <button class="cmx-btn" type="submit">Apply Range</button>
+            <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_performance') }}">Reset</a>
+          </div>
+        </div>
+        <div class="rent-preset-row" aria-label="Quick date range options">
+          <button type="button" data-rent-preset="this-month">This Month</button>
+          <button type="button" data-rent-preset="last-month">Last Month</button>
+          <button type="button" data-rent-preset="last-30">Last 30 Days</button>
+          <button type="button" data-rent-preset="quarter-to-date">Quarter To Date</button>
+          <button type="button" data-rent-preset="year-to-date">Year To Date</button>
+          <button type="button" data-rent-preset="full-year">Full Year</button>
+        </div>
+      </form>
     </section>
 
     <section class="rent-kpi-grid">
@@ -251,7 +113,7 @@
       <div class="rent-kpi">
         <div class="rent-kpi-label">Rent Charged</div>
         <div class="rent-kpi-value">${{ '%.0f'|format(report.totals.actual_charged_rent) }}</div>
-        <div class="rent-kpi-note">Resident rent billed this year</div>
+        <div class="rent-kpi-note">Resident rent billed for the selected period</div>
       </div>
       <div class="rent-kpi bad">
         <div class="rent-kpi-label">Vacancy Percentage</div>
@@ -270,13 +132,13 @@
       <div>
         <strong>Current read:</strong>
         {% if collection_rate is not none and collection_rate < 50 %}
-          rent collection is below target. Use the shelter summary and drilldown to identify where unpaid rent is concentrated.
+          rent collection is below target for this selected period. Use the shelter summary and drilldown to identify where unpaid rent is concentrated.
         {% elif collection_rate is not none and collection_rate < 80 %}
-          rent collection is mixed. Review shelters below 80 percent and compare cash collection against total rent applied.
+          rent collection is mixed for this selected period. Review shelters below 80 percent and compare cash collection against total rent applied.
         {% elif collection_rate is not none %}
-          rent collection is strong. Continue monitoring unpaid rent and work credit levels.
+          rent collection is strong for this selected period. Continue monitoring unpaid rent and work credit levels.
         {% else %}
-          there is not enough rent charged data yet to calculate a collection rate.
+          there is not enough rent charged data yet to calculate a collection rate for this selected period.
         {% endif %}
       </div>
     </section>
@@ -285,7 +147,7 @@
       <div class="rent-panel-head">
         <div>
           <h2>12 Month Rent Collection Trend</h2>
-          <div class="rent-panel-subtitle">Program level trend for rent charged, total rent applied, and unpaid rent.</div>
+          <div class="rent-panel-subtitle">Program level trend ending with the selected period end date.</div>
         </div>
       </div>
       {% set chart = namespace(max_value=1, charged_points='', applied_points='', unpaid_points='') %}
@@ -364,7 +226,7 @@
                 <td>{% if row_vacancy_percentage is not none %}{{ '%.1f'|format(row_vacancy_percentage) }}%{% else %}—{% endif %}</td>
                 <td>${{ '%.0f'|format(r.unrecovered_charged_rent) }}</td>
                 <td><span class="rent-rate-pill {{ row_rate_class }}">{% if r.collection_rate is not none %}{{ '%.1f'|format(r.collection_rate) }}%{% else %}—{% endif %}</span></td>
-                <td><a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_drilldown', shelter=r.shelter, year=report.year) }}">View</a></td>
+                <td><a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_drilldown', shelter=r.shelter, start_date=report.period_start, end_date=report.period_end) }}">View</a></td>
               </tr>
             {% endfor %}
           </tbody>
@@ -428,4 +290,63 @@
 
   </div>
 </div>
+
+<script>
+(function () {
+  const form = document.getElementById('rent-range-form');
+  const startInput = document.getElementById('rent-start-date');
+  const endInput = document.getElementById('rent-end-date');
+  if (!form || !startInput || !endInput) return;
+
+  function pad(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function isoDate(date) {
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+  }
+
+  function monthStart(date) {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  }
+
+  function monthEnd(date) {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  }
+
+  function quarterStart(date) {
+    const quarterMonth = Math.floor(date.getMonth() / 3) * 3;
+    return new Date(date.getFullYear(), quarterMonth, 1);
+  }
+
+  function setRange(startDate, endDate) {
+    startInput.value = isoDate(startDate);
+    endInput.value = isoDate(endDate);
+    form.submit();
+  }
+
+  document.querySelectorAll('[data-rent-preset]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const now = new Date();
+      const preset = button.getAttribute('data-rent-preset');
+      if (preset === 'this-month') {
+        setRange(monthStart(now), monthEnd(now));
+      } else if (preset === 'last-month') {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        setRange(monthStart(lastMonth), monthEnd(lastMonth));
+      } else if (preset === 'last-30') {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        start.setDate(start.getDate() - 29);
+        setRange(start, now);
+      } else if (preset === 'quarter-to-date') {
+        setRange(quarterStart(now), now);
+      } else if (preset === 'year-to-date') {
+        setRange(new Date(now.getFullYear(), 0, 1), now);
+      } else if (preset === 'full-year') {
+        setRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
