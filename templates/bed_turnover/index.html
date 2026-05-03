@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <h1>Bed Turnover</h1>
+    <p style="color:#64748b; margin-bottom:12px;">Refill speed across shelters</p>
+
+    <table class="cmx-table">
+      <thead>
+        <tr>
+          <th>Shelter</th>
+          <th>Turnovers</th>
+          <th>Avg Idle</th>
+          <th>Median</th>
+          <th>Longest</th>
+          <th>>2 Days</th>
+          <th>>7 Days</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.shelter_label }}</td>
+          <td>{{ r.turnover_count }}</td>
+          <td>{{ r.avg_idle_days or '—' }}</td>
+          <td>{{ r.median_idle_days or '—' }}</td>
+          <td>{{ r.longest_idle_days or '—' }}</td>
+          <td>{{ r.over_two_day_count }}</td>
+          <td>{{ r.over_seven_day_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
