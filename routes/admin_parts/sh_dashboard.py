@@ -29,6 +29,7 @@ from core.timestamp_normalization import normalize_timestamp_columns
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 PASS_CLEANUP_JOB_NAME = "pass_retention_cleanup"
+RENT_POSTING_JOB_NAME = "monthly_rent_charge_posting"
 PASS_CLEANUP_STALE_THRESHOLD = timedelta(hours=24)
 RECENT_ERROR_ACTIVE_THRESHOLD = timedelta(minutes=15)
 RUN_SLOTS = ((6, 0), (15, 0), (23, 0))
@@ -180,6 +181,63 @@ def _pass_cleanup_card() -> dict:
         state,
         detail,
         f"Finished: {finished_at} | Failures last 24h: {failure_count} | Next scheduled run: {next_run}",
+    )
+
+
+def _rent_posting_card() -> dict:
+    latest = load_latest_job_run(RENT_POSTING_JOB_NAME)
+
+    if not latest:
+        return _status(
+            "Last Rent Posting",
+            "warn",
+            "No monthly rent posting run has been recorded yet.",
+            "Runs automatically during days 1 through 3 of each month in Chicago time.",
+        )
+
+    status = str(latest.get("status") or "").strip().lower()
+    metadata = _load_job_metadata(latest)
+    rent_month_label = str(metadata.get("rent_month_label") or "current month").strip()
+    success_count = int(metadata.get("success_count", 0) or 0)
+    error_count = int(metadata.get("error_count", 0) or 0)
+    total_shelters = int(metadata.get("total_shelters", 0) or 0)
+    finished_at = str(latest.get("finished_at") or latest.get("started_at") or "").strip()
+    duration_ms = latest.get("duration_ms")
+    failure_count = count_recent_failed_job_runs(
+        job_name=RENT_POSTING_JOB_NAME,
+        since_iso=(datetime.now(UTC) - timedelta(days=7)).replace(microsecond=0).isoformat(),
+    )
+
+    if status == "error":
+        error_message = str(latest.get("error_message") or "Monthly rent posting failed.").strip()
+        return _status(
+            "Last Rent Posting",
+            "error",
+            error_message,
+            f"Month: {rent_month_label} | Last recorded: {finished_at} | Failures last 7d: {failure_count}",
+        )
+
+    if status == "running":
+        return _status(
+            "Last Rent Posting",
+            "warn",
+            "Monthly rent posting is currently recorded as running.",
+            f"Started: {finished_at} | Month: {rent_month_label}",
+        )
+
+    detail = (
+        f"Checked {success_count} of {total_shelters} shelter(s); "
+        f"Errors {error_count}"
+    )
+    if duration_ms is not None:
+        detail = f"{detail} | Duration {duration_ms} ms"
+
+    state = "error" if error_count else "ok"
+    return _status(
+        "Last Rent Posting",
+        state,
+        detail,
+        f"Month: {rent_month_label} | Finished: {finished_at} | Failures last 7d: {failure_count}",
     )
 
 
@@ -498,6 +556,7 @@ def system_health_dashboard_view():
         _check_sms_status(),
         _check_backup_status(),
         _pass_cleanup_card(),
+        _rent_posting_card(),
         _timestamp_format_card(),
         *_job_status_cards(),
     ]
@@ -507,7 +566,7 @@ def system_health_dashboard_view():
     _pass_cleanup_watchdog()
     alertable_runtime_cards = [
         card for card in runtime_cards
-        if card.get("label") not in {"Last Error", "Last Successful Event", "SMS", "Last Pass Cleanup"}
+        if card.get("label") not in {"Last Error", "Last Successful Event", "SMS", "Last Pass Cleanup", "Last Rent Posting"}
     ]
     sync_system_health_alerts(alertable_runtime_cards)
     sync_enterprise_readiness_alerts(enterprise_cards)
