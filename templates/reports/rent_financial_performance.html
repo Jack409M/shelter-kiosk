@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <h1>Rent Financial Performance</h1>
+      <div class="cmx-section-subtitle">Year {{ report.year }}</div>
+    </div>
+
+    <div class="cmx-card">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Shelter</th>
+            <th>Minimal Capacity</th>
+            <th>Historic Capacity</th>
+            <th>Charged</th>
+            <th>Cash</th>
+            <th>Work</th>
+            <th>Recovered</th>
+            <th>Vacancy</th>
+            <th>Unrecovered</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in report.rows %}
+          <tr>
+            <td>{{ r.shelter_label }}</td>
+            <td>${{ '%.0f'|format(r.minimal_capacity_rent) }}</td>
+            <td>${{ '%.0f'|format(r.historic_capacity_rent) }}</td>
+            <td>${{ '%.0f'|format(r.actual_charged_rent) }}</td>
+            <td>${{ '%.0f'|format(r.cash_collected) }}</td>
+            <td>${{ '%.0f'|format(r.work_credit) }}</td>
+            <td>${{ '%.0f'|format(r.total_recovered) }}</td>
+            <td>${{ '%.0f'|format(r.vacancy_loss) }}</td>
+            <td>${{ '%.0f'|format(r.unrecovered_charged_rent) }}</td>
+          </tr>
+          {% endfor %}
+          <tr style="font-weight:700;">
+            <td>Total</td>
+            <td>${{ '%.0f'|format(report.totals.minimal_capacity_rent) }}</td>
+            <td>${{ '%.0f'|format(report.totals.historic_capacity_rent) }}</td>
+            <td>${{ '%.0f'|format(report.totals.actual_charged_rent) }}</td>
+            <td>${{ '%.0f'|format(report.totals.cash_collected) }}</td>
+            <td>${{ '%.0f'|format(report.totals.work_credit) }}</td>
+            <td>${{ '%.0f'|format(report.totals.total_recovered) }}</td>
+            <td>${{ '%.0f'|format(report.totals.vacancy_loss) }}</td>
+            <td>${{ '%.0f'|format(report.totals.unrecovered_charged_rent) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmx-card">
+      <h2>Definitions</h2>
+      <ul>
+        {% for d in report.definitions %}
+          <li><strong>{{ d.term }}:</strong> {{ d.definition }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
