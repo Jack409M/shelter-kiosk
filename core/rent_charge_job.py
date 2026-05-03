@@ -5,7 +5,7 @@ from typing import Iterable
 
 from flask import session
 
-from core.db import db_fetchone
+from core.db import db_fetchone, get_db
 from core.sh_events import safe_log_sh_event
 from core.system_alerts import create_system_alert
 from routes.rent_tracking_parts.data_access import _load_sheet_entries
@@ -120,6 +120,10 @@ def run_monthly_rent_charge_job(
     results: list[RentChargeJobResult] = []
 
     with app.test_request_context("/_scheduled/monthly-rent-charges"):
+        # Force the app DB adapter to initialize g.db_kind before rent schema code
+        # branches on Postgres versus SQLite DDL.
+        get_db()
+
         rent_year, rent_month = _current_year_month()
         rent_month_label = _month_label(rent_year, rent_month)
 
