@@ -12,6 +12,11 @@ CHICAGO_TZ = ZoneInfo("America/Chicago")
 TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
 
 
+def _emit_status(app, message: str) -> None:
+    print(f"RENT_CHARGE_SCHEDULER: {message}", flush=True)
+    app.logger.warning("RENT_CHARGE_SCHEDULER: %s", message)
+
+
 def _env_value(name: str) -> str:
     return (os.environ.get(name) or "").strip().lower()
 
@@ -35,13 +40,10 @@ def _scheduler_loop(app) -> None:
                 "Runs once per month during days 1 through 3 in Chicago time."
             )
 
-            # Run during the first three days of the month to ensure catch up.
             if now.day in {1, 2, 3} and run_key != last_run_key:
-                app.logger.info(
-                    "rent charge scheduler running monthly rent check year=%s month=%s day=%s",
-                    now.year,
-                    now.month,
-                    now.day,
+                _emit_status(
+                    app,
+                    f"running monthly rent check year={now.year} month={now.month} day={now.day}",
                 )
                 run_monthly_rent_charge_job(app, source="rent_charge_scheduler")
                 app.extensions["rent_charge_scheduler_last_run_at"] = now.isoformat(
@@ -52,6 +54,7 @@ def _scheduler_loop(app) -> None:
         except Exception:
             app.extensions["rent_charge_scheduler_status"] = "error"
             app.logger.exception("rent charge scheduler loop failure")
+            print("RENT_CHARGE_SCHEDULER: loop failure", flush=True)
 
         time.sleep(60)
 
@@ -59,21 +62,21 @@ def _scheduler_loop(app) -> None:
 def start_rent_charge_scheduler(app) -> None:
     if app.config.get("TESTING"):
         app.extensions["rent_charge_scheduler_status"] = "testing_skipped"
-        app.logger.info("rent charge scheduler skipped in testing")
+        _emit_status(app, "skipped in testing")
         return
 
     if _scheduler_disabled_by_env():
         app.extensions["rent_charge_scheduler_status"] = "disabled"
-        app.logger.info("rent charge scheduler disabled by DISABLE_RENT_CHARGE_SCHEDULER")
+        _emit_status(app, "disabled by DISABLE_RENT_CHARGE_SCHEDULER")
         return
 
     if os.environ.get("RUN_MAIN") == "true":
         app.extensions["rent_charge_scheduler_status"] = "werkzeug_reloader_skipped"
-        app.logger.info("rent charge scheduler skipped for Werkzeug reloader child")
+        _emit_status(app, "skipped for Werkzeug reloader child")
         return
 
     if app.extensions.get("rent_charge_scheduler_started"):
-        app.logger.info("rent charge scheduler already started")
+        _emit_status(app, "already started")
         return
 
     thread = threading.Thread(
@@ -89,6 +92,4 @@ def start_rent_charge_scheduler(app) -> None:
     app.extensions["rent_charge_scheduler_schedule"] = (
         "Runs once per month during days 1 through 3 in Chicago time."
     )
-    app.logger.info(
-        "rent charge scheduler started schedule='days 1-3 monthly, Chicago time'"
-    )
+    _emit_status(app, "started schedule=days 1-3 monthly Chicago time")
