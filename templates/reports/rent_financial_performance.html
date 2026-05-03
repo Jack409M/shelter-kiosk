@@ -20,22 +20,10 @@
     </div>
 
     <div class="cmx-grid cmx-grid-4">
-      <div class="cmx-card">
-        <strong>Rent Charged</strong><br>
-        ${{ '%.0f'|format(report.totals.actual_charged_rent) }}
-      </div>
-      <div class="cmx-card">
-        <strong>Cash Collected</strong><br>
-        ${{ '%.0f'|format(report.totals.cash_collected) }}
-      </div>
-      <div class="cmx-card">
-        <strong>Total Rent Applied</strong><br>
-        ${{ '%.0f'|format(report.totals.total_recovered) }}
-      </div>
-      <div class="cmx-card">
-        <strong>Unpaid Rent</strong><br>
-        ${{ '%.0f'|format(report.totals.unrecovered_charged_rent) }}
-      </div>
+      <div class="cmx-card"><strong>Rent Charged</strong><br>${{ '%.0f'|format(report.totals.actual_charged_rent) }}</div>
+      <div class="cmx-card"><strong>Cash Collected</strong><br>${{ '%.0f'|format(report.totals.cash_collected) }}</div>
+      <div class="cmx-card"><strong>Total Rent Applied</strong><br>${{ '%.0f'|format(report.totals.total_recovered) }}</div>
+      <div class="cmx-card"><strong>Unpaid Rent</strong><br>${{ '%.0f'|format(report.totals.unrecovered_charged_rent) }}</div>
     </div>
 
     <div class="cmx-card">
@@ -44,17 +32,7 @@
         <table class="audit-table">
           <thead>
             <tr>
-              <th>Shelter</th>
-              <th>Minimal Capacity</th>
-              <th>Historic Capacity</th>
-              <th>Rent Charged</th>
-              <th>Cash Collected</th>
-              <th>Work Credit</th>
-              <th>Total Rent Applied</th>
-              <th>Vacancy</th>
-              <th>Unpaid Rent</th>
-              <th>Rent Collection Rate</th>
-              <th>Drilldown</th>
+              <th>Shelter</th><th>Minimal Capacity</th><th>Historic Capacity</th><th>Rent Charged</th><th>Cash Collected</th><th>Work Credit</th><th>Total Rent Applied</th><th>Vacancy</th><th>Unpaid Rent</th><th>Rent Collection Rate</th><th>Drilldown</th>
             </tr>
           </thead>
           <tbody>
@@ -92,31 +70,45 @@
     </div>
 
     <div class="cmx-card">
-      <h2>Monthly Trend</h2>
-      <div class="cmx-section-subtitle">Cash collected, work credit, and unpaid rent by month and shelter.</div>
+      <h2>Monthly Trend Graph</h2>
+      <div class="cmx-section-subtitle">Each bar compares rent charged, total rent applied, and unpaid rent by month and shelter.</div>
+      {% set ns = namespace(max_value=1) %}
+      {% for row in report.monthly_rows %}
+        {% if row.actual_charged_rent > ns.max_value %}{% set ns.max_value = row.actual_charged_rent %}{% endif %}
+        {% if row.total_recovered > ns.max_value %}{% set ns.max_value = row.total_recovered %}{% endif %}
+        {% if row.unrecovered_charged_rent > ns.max_value %}{% set ns.max_value = row.unrecovered_charged_rent %}{% endif %}
+      {% endfor %}
+      <div style="display:grid; gap:12px; margin-top:14px;">
+        {% for row in report.monthly_rows %}
+          {% set charged_pct = (row.actual_charged_rent / ns.max_value * 100) if ns.max_value else 0 %}
+          {% set applied_pct = (row.total_recovered / ns.max_value * 100) if ns.max_value else 0 %}
+          {% set unpaid_pct = (row.unrecovered_charged_rent / ns.max_value * 100) if ns.max_value else 0 %}
+          <div style="display:grid; grid-template-columns:170px 1fr; gap:10px; align-items:center;">
+            <div style="font-size:13px;"><strong>{{ row.month_label }}</strong><br>{{ row.shelter_label }}</div>
+            <div style="display:grid; gap:4px;">
+              <div title="Rent charged ${{ '%.0f'|format(row.actual_charged_rent) }}" style="height:10px; width:{{ charged_pct }}%; background:#17324d; border-radius:999px;"></div>
+              <div title="Total rent applied ${{ '%.0f'|format(row.total_recovered) }}" style="height:10px; width:{{ applied_pct }}%; background:#1f7a4f; border-radius:999px;"></div>
+              <div title="Unpaid rent ${{ '%.0f'|format(row.unrecovered_charged_rent) }}" style="height:10px; width:{{ unpaid_pct }}%; background:#9b2c2c; border-radius:999px;"></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <div style="display:flex; gap:16px; margin-top:14px; font-size:13px; color:#4b5563;">
+        <span><strong style="color:#17324d;">■</strong> Rent charged</span>
+        <span><strong style="color:#1f7a4f;">■</strong> Total rent applied</span>
+        <span><strong style="color:#9b2c2c;">■</strong> Unpaid rent</span>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <h2>Monthly Trend Detail</h2>
       <div style="overflow-x:auto; margin-top:12px;">
         <table class="audit-table">
-          <thead>
-            <tr>
-              <th>Month</th>
-              <th>Shelter</th>
-              <th>Rent Charged</th>
-              <th>Cash Collected</th>
-              <th>Work Credit</th>
-              <th>Total Rent Applied</th>
-              <th>Unpaid Rent</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Month</th><th>Shelter</th><th>Rent Charged</th><th>Cash Collected</th><th>Work Credit</th><th>Total Rent Applied</th><th>Unpaid Rent</th></tr></thead>
           <tbody>
             {% for row in report.monthly_rows %}
             <tr>
-              <td>{{ row.month_label }}</td>
-              <td>{{ row.shelter_label }}</td>
-              <td>${{ '%.0f'|format(row.actual_charged_rent) }}</td>
-              <td>${{ '%.0f'|format(row.cash_collected) }}</td>
-              <td>${{ '%.0f'|format(row.work_credit) }}</td>
-              <td>${{ '%.0f'|format(row.total_recovered) }}</td>
-              <td>${{ '%.0f'|format(row.unrecovered_charged_rent) }}</td>
+              <td>{{ row.month_label }}</td><td>{{ row.shelter_label }}</td><td>${{ '%.0f'|format(row.actual_charged_rent) }}</td><td>${{ '%.0f'|format(row.cash_collected) }}</td><td>${{ '%.0f'|format(row.work_credit) }}</td><td>${{ '%.0f'|format(row.total_recovered) }}</td><td>${{ '%.0f'|format(row.unrecovered_charged_rent) }}</td>
             </tr>
             {% endfor %}
           </tbody>
