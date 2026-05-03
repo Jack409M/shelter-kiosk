@@ -452,3 +452,79 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
         monthly_rows=_monthly_rows(year),
         definitions=definitions,
     )
+
+
+def build_rent_resident_drilldown(*, year: int, shelter: str) -> dict:
+    shelter_key = _shelter_key(shelter)
+    rows = db_fetchall(
+        """
+        SELECT
+            r.id AS resident_id,
+            r.first_name,
+            r.last_name,
+            COALESCE(SUM(COALESCE(e.prorated_charge, e.current_charge, 0)), 0) AS rent_charged,
+            COALESCE(SUM(COALESCE(e.occupied_days, 0)), 0) AS occupied_days
+        FROM residents r
+        JOIN resident_rent_sheet_entries e ON e.resident_id = r.id
+        JOIN resident_rent_sheets s ON s.id = e.sheet_id
+        WHERE s.rent_year = ?
+          AND LOWER(COALESCE(s.shelter, '')) = ?
+        GROUP BY r.id, r.first_name, r.last_name
+        ORDER BY r.last_name ASC, r.first_name ASC, r.id ASC
+        """,
+        (year, shelter_key),
+    )
+    credit_rows = db_fetchall(
+        """
+        SELECT
+            resident_id,
+            COALESCE(SUM(CASE WHEN entry_type = 'payment' THEN COALESCE(credit_amount, 0) ELSE 0 END), 0) AS cash_collected,
+            COALESCE(SUM(CASE WHEN source_code = 'manual_credit_work_credit' THEN COALESCE(credit_amount, 0) ELSE 0 END), 0) AS work_credit
+        FROM resident_rent_ledger_entries
+        WHERE entry_date >= ?
+          AND entry_date <= ?
+          AND LOWER(COALESCE(shelter, '')) = ?
+          AND COALESCE(voided, FALSE) = FALSE
+        GROUP BY resident_id
+        """,
+        (f"{year:04d}-01-01", f"{year:04d}-12-31", shelter_key),
+    )
+    credits = {int(row.get("resident_id")): dict(row) for row in credit_rows or []}
+    output_rows: list[dict] = []
+
+    for row in rows or []:
+        resident_id = int(row.get("resident_id"))
+        credit = credits.get(resident_id, {})
+        rent_charged = _money(row.get("rent_charged"))
+        cash = _money(credit.get("cash_collected"))
+        work = _money(credit.get("work_credit"))
+        total_applied = round(cash + work, 2)
+        output_rows.append(
+            {
+                "resident_id": resident_id,
+                "resident_name": f"{row.get('first_name') or ''} {row.get('last_name') or ''}".strip(),
+                "rent_charged": rent_charged,
+                "cash_collected": cash,
+                "work_credit": work,
+                "total_rent_applied": total_applied,
+                "unpaid_rent": round(rent_charged - total_applied, 2),
+                "occupied_days": _int(row.get("occupied_days")),
+                "rent_collection_rate": _pct(cash, rent_charged),
+            }
+        )
+
+    totals = {
+        "rent_charged": round(sum(row["rent_charged"] for row in output_rows), 2),
+        "cash_collected": round(sum(row["cash_collected"] for row in output_rows), 2),
+        "work_credit": round(sum(row["work_credit"] for row in output_rows), 2),
+        "total_rent_applied": round(sum(row["total_rent_applied"] for row in output_rows), 2),
+        "unpaid_rent": round(sum(row["unpaid_rent"] for row in output_rows), 2),
+    }
+
+    return {
+        "year": year,
+        "shelter": shelter_key,
+        "shelter_label": _shelter_label(shelter_key),
+        "rows": output_rows,
+        "totals": totals,
+    }
