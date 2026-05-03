@@ -13,7 +13,6 @@ from core.system_alerts import create_system_alert
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 RUN_SLOTS = {(6, 0), (15, 0), (23, 0)}
 TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
-FALSY_ENV_VALUES = {"0", "false", "no", "off"}
 
 
 def _env_value(name: str) -> str:
@@ -21,12 +20,7 @@ def _env_value(name: str) -> str:
 
 
 def _scheduler_disabled_by_env() -> bool:
-    explicit_value = _env_value("ENABLE_PASS_RETENTION_SCHEDULER")
-    if explicit_value in FALSY_ENV_VALUES:
-        return True
-
-    legacy_value = _env_value("SCHEDULER_ENABLED")
-    return legacy_value in FALSY_ENV_VALUES
+    return _env_value("DISABLE_PASS_RETENTION_SCHEDULER") in TRUTHY_ENV_VALUES
 
 
 def _run_cleanup_cycle(app) -> None:
@@ -78,7 +72,7 @@ def start_pass_retention_scheduler(app) -> None:
 
     if _scheduler_disabled_by_env():
         app.extensions["pass_retention_scheduler_status"] = "disabled"
-        app.logger.info("pass retention scheduler disabled by environment")
+        app.logger.info("pass retention scheduler disabled by DISABLE_PASS_RETENTION_SCHEDULER")
         return
 
     if os.environ.get("RUN_MAIN") == "true":
