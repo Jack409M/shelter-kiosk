@@ -9,6 +9,7 @@ from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.pass_retention import run_pass_retention_cleanup_for_shelter
+from core.rent_idle_time_service import build_resident_slot_idle_time_report
 from routes.admin_parts.sh_data_quality import _load_data_quality_issues
 from routes.case_management_parts.helpers import current_enrollment_order_sql
 
@@ -137,6 +138,36 @@ def _load_data_issue_summary(shelter: str | None) -> dict:
         "issue_count": issue_count,
         "error_count": error_count,
         "warning_count": warning_count,
+    }
+
+
+def _soft_idle_notice_for_shelter(year: int, shelter: str | None) -> dict | None:
+    role = str(session.get("role") or "").strip().lower()
+    if role not in {"case_manager", "shelter_director"}:
+        return None
+
+    report = build_resident_slot_idle_time_report(year)
+    target = str(shelter or "").strip().lower()
+    row = next((item for item in report["rows"] if item.shelter == target), None)
+    if not row:
+        return None
+
+    if not row.matched_fill_count:
+        return None
+
+    if row.over_two_day_count <= 0 and (row.avg_idle_days or 0) <= 2:
+        return None
+
+    return {
+        "title": "Vacancy Attention",
+        "message": "Some resident slots have been idle longer than expected. Review placement timing when convenient.",
+        "avg_idle_days": row.avg_idle_days,
+        "median_idle_days": row.median_idle_days,
+        "longest_idle_days": row.longest_idle_days,
+        "over_two_day_count": row.over_two_day_count,
+        "over_seven_day_count": row.over_seven_day_count,
+        "matched_fill_count": row.matched_fill_count,
+        "definition": report["definition"],
     }
 
 
@@ -364,6 +395,7 @@ def dashboard():
     month_start_local = today_local.replace(day=1)
     month_end_local = (month_start_local + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     level9_review_cutoff = today_local + timedelta(days=14)
+    idle_time_notice = _soft_idle_notice_for_shelter(today_local.year, str(shelter or ""))
 
     attendance_rows = db_fetchall(
         _sql(
@@ -833,6 +865,7 @@ def dashboard():
         intake_drafts_count=intake_drafts_count,
         family_intakes_pending_count=family_intakes_pending_count,
         data_issue_summary=data_issue_summary,
+        idle_time_notice=idle_time_notice,
         missed_clock_in_rows=missed_clock_in_rows,
         late_check_in_rows=late_check_in_rows,
         appointments_today=appointments_today,
