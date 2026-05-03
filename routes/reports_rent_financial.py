@@ -9,7 +9,7 @@ from core.auth import require_login, require_roles, require_shelter
 from core.rent_reporting_service import (
     build_rent_financial_performance_report,
     build_rent_resident_drilldown,
-    clean_report_year,
+    clean_report_period,
 )
 
 reports_rent_financial = Blueprint("reports_rent_financial", __name__)
@@ -24,13 +24,21 @@ def _clean_shelter(value: object | None) -> str:
     return "abba"
 
 
+def _report_period_from_request():
+    return clean_report_period(
+        start_date_value=request.args.get("start_date"),
+        end_date_value=request.args.get("end_date"),
+        year_value=request.args.get("year"),
+    )
+
+
 @reports_rent_financial.route("/staff/reports/rent-financial-performance")
 @require_login
 @require_shelter
 @require_roles("admin", "shelter_director", "case_manager")
 def rent_financial_performance():
-    year = clean_report_year(request.args.get("year"))
-    report = build_rent_financial_performance_report(year)
+    period = _report_period_from_request()
+    report = build_rent_financial_performance_report(period=period)
 
     return render_template(
         "reports/rent_financial_performance.html",
@@ -44,9 +52,9 @@ def rent_financial_performance():
 @require_shelter
 @require_roles("admin", "shelter_director", "case_manager")
 def rent_financial_drilldown():
-    year = clean_report_year(request.args.get("year"))
+    period = _report_period_from_request()
     shelter = _clean_shelter(request.args.get("shelter"))
-    drilldown = build_rent_resident_drilldown(year=year, shelter=shelter)
+    drilldown = build_rent_resident_drilldown(period=period, shelter=shelter)
 
     return render_template(
         "reports/rent_financial_drilldown.html",
@@ -60,8 +68,8 @@ def rent_financial_drilldown():
 @require_shelter
 @require_roles("admin", "shelter_director", "case_manager")
 def rent_financial_board_export():
-    year = clean_report_year(request.args.get("year"))
-    report = build_rent_financial_performance_report(year)
+    period = _report_period_from_request()
+    report = build_rent_financial_performance_report(period=period)
 
     return render_template(
         "reports/rent_financial_board_export.html",
@@ -75,10 +83,15 @@ def rent_financial_board_export():
 @require_shelter
 @require_roles("admin", "shelter_director", "case_manager")
 def rent_financial_csv_export():
-    year = clean_report_year(request.args.get("year"))
-    report = build_rent_financial_performance_report(year)
+    period = _report_period_from_request()
+    report = build_rent_financial_performance_report(period=period)
     output = io.StringIO()
     writer = csv.writer(output)
+    writer.writerow([
+        "Report Period",
+        report.period_label,
+    ])
+    writer.writerow([])
     writer.writerow([
         "Shelter",
         "Minimal Capacity Rent",
@@ -106,10 +119,12 @@ def rent_financial_csv_export():
             "" if row.collection_rate is None else f"{row.collection_rate:.1f}%",
         ])
 
+    safe_start = report.period_start.replace("-", "")
+    safe_end = report.period_end.replace("-", "")
     return Response(
         output.getvalue(),
         mimetype="text/csv",
         headers={
-            "Content-Disposition": f"attachment; filename=rent_collection_performance_{year}.csv"
+            "Content-Disposition": f"attachment; filename=rent_collection_performance_{safe_start}_{safe_end}.csv"
         },
     )
