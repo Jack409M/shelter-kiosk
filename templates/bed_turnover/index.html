@@ -5,7 +5,7 @@
     <h1>Bed Turnover</h1>
     <p style="color:#64748b; margin-bottom:12px;">Refill speed across shelters</p>
 
-    <table class="cmx-table">
+    <table class="cmx-table" style="margin-bottom:20px;">
       <thead>
         <tr>
           <th>Shelter</th>
@@ -31,6 +31,33 @@
         {% endfor %}
       </tbody>
     </table>
+
+    <h2 style="margin-top:20px;">Currently Idle Slots</h2>
+    <p style="color:#64748b; margin-bottom:10px;">Beds that have not yet been refilled</p>
+
+    <table class="cmx-table">
+      <thead>
+        <tr>
+          <th>Resident</th>
+          <th>Shelter</th>
+          <th>Exit Date</th>
+          <th>Days Idle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in live_idle_slots %}
+        <tr>
+          <td>{{ r.resident_name }}</td>
+          <td>{{ r.shelter_label }}</td>
+          <td>{{ r.exit_date }}</td>
+          <td {% if r.idle_days > 7 %}style="color:#9b2c2c; font-weight:700;"{% elif r.idle_days > 2 %}style="color:#b7791f; font-weight:600;"{% endif %}>
+            {{ r.idle_days }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
   </div>
 </div>
 {% endblock %}
