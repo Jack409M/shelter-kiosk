@@ -38,7 +38,8 @@
     <table class="cmx-table">
       <thead>
         <tr>
-          <th>Resident</th>
+          <th>Slot</th>
+          <th>Most Recent Exit</th>
           <th>Shelter</th>
           <th>Exit Date</th>
           <th>Days Idle</th>
@@ -47,12 +48,18 @@
       <tbody>
         {% for r in live_idle_slots %}
         <tr>
+          <td>{{ r.slot_label or 'Open Slot' }}</td>
           <td>{{ r.resident_name }}</td>
           <td>{{ r.shelter_label }}</td>
           <td>{{ r.exit_date }}</td>
-          <td {% if r.idle_days > 7 %}style="color:#9b2c2c; font-weight:700;"{% elif r.idle_days > 2 %}style="color:#b7791f; font-weight:600;"{% endif %}>
-            {{ r.idle_days }}
+          {% set idle_days = r.idle_days if r.idle_days is not none else none %}
+          <td {% if idle_days is not none and idle_days > 7 %}style="color:#9b2c2c; font-weight:700;"{% elif idle_days is not none and idle_days > 2 %}style="color:#b7791f; font-weight:600;"{% endif %}>
+            {% if idle_days is not none %}{{ idle_days }}{% else %}—{% endif %}
           </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="color:#64748b;">No current open slots found from capacity and active enrollment counts.</td>
         </tr>
         {% endfor %}
       </tbody>
