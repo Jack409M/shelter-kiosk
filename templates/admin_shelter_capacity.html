@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <h1 class="cmx-section-title">Shelter Capacity</h1>
+        <div class="cmx-section-subtitle">
+          Set the total number of resident slots available in each shelter.
+        </div>
+      </div>
+    </div>
+
+    <form method="post" class="cmx-card">
+
+      <div class="cmx-grid cmx-grid-3">
+        {% for r in rows %}
+        <div class="cmx-field">
+          <label>{{ r.shelter_label }}</label>
+          <input type="number" min="0" name="capacity_{{ r.shelter }}" value="{{ r.capacity }}" required>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="cmx-button-row" style="margin-top:20px;">
+        <button type="submit" class="cmx-btn">Save Capacity</button>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}
