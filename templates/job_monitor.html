@@ -3,20 +3,157 @@
 {% block page_header %}
 <div class="page-header">
   <h1 class="page-title">Background Job Monitor</h1>
-  <p class="page-subtitle">Scheduler execution history with success, failure, and runtime visibility.</p>
+  <p class="page-subtitle">
+    Database backed scheduler execution history with success, failure, lock skip, and runtime visibility.
+  </p>
 </div>
 {% endblock %}
 
 {% block content %}
+<style>
+  .job-monitor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: end;
+  }
+
+  .job-monitor-actions label {
+    display: block;
+    color: #60758a;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .job-monitor-actions select,
+  .job-monitor-actions input {
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
+    padding: 9px 10px;
+  }
+
+  .job-monitor-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .job-monitor-summary-card {
+    border: 1px solid #d7e1ea;
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 14px;
+  }
+
+  .job-monitor-summary-card strong {
+    display: block;
+    color: #1f3550;
+    font-size: 24px;
+  }
+
+  .job-monitor-summary-card small {
+    color: #60758a;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .job-status {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    min-width: 84px;
+    padding: 5px 8px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .job-status-success { background: #eaf7ef; color: #1f7a3d; }
+  .job-status-error { background: #fdeceb; color: #a7372f; }
+  .job-status-running { background: #fff6df; color: #9a6600; }
+  .job-status-skipped_lock { background: #eef4ff; color: #315b9d; }
+
+  .job-meta {
+    color: #7a8da0;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  @media (max-width: 1000px) {
+    .job-monitor-summary {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
 <div class="card" style="margin-bottom:16px;">
   <a href="/staff/admin/system-health">Back to System Health</a>
 </div>
 
-<div class="card" style="margin-bottom:16px; display:flex; gap:20px;">
-  <div><strong>{{ summary.total }}</strong><br><small>Total Runs</small></div>
-  <div><strong>{{ summary.success }}</strong><br><small>Success</small></div>
-  <div><strong>{{ summary.error }}</strong><br><small>Errors</small></div>
-  <div><strong>{{ summary.running }}</strong><br><small>Running</small></div>
+<div class="job-monitor-summary">
+  <div class="job-monitor-summary-card">
+    <strong>{{ summary.total }}</strong>
+    <small>Total Runs</small>
+  </div>
+  <div class="job-monitor-summary-card">
+    <strong>{{ summary.success }}</strong>
+    <small>Success</small>
+  </div>
+  <div class="job-monitor-summary-card">
+    <strong>{{ summary.error }}</strong>
+    <small>Errors</small>
+  </div>
+  <div class="job-monitor-summary-card">
+    <strong>{{ summary.skipped_lock }}</strong>
+    <small>Lock Skips</small>
+  </div>
+  <div class="job-monitor-summary-card">
+    <strong>{{ summary.running }}</strong>
+    <small>Running</small>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <form class="job-monitor-actions" method="GET">
+    <div>
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        {% for option in status_options %}
+          <option value="{{ option }}" {% if selected_status == option %}selected{% endif %}>
+            {{ option.replace('_', ' ')|title }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="job">Job</label>
+      <select id="job" name="job">
+        <option value="">All jobs</option>
+        {% for job in available_jobs %}
+          <option value="{{ job.name }}" {% if selected_job == job.name %}selected{% endif %}>
+            {{ job.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary">Apply Filters</button>
+      <a class="btn" href="/staff/admin/system-health/job-monitor">Clear</a>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  Showing <strong>{{ filtered_summary.total }}</strong> run(s)
+  {% if selected_status != "all" %}with status <strong>{{ selected_status.replace('_', ' ') }}</strong>{% endif %}
+  {% if selected_job %}for <strong>{{ selected_job }}</strong>{% endif %}.
 </div>
 
 <div class="card">
@@ -24,27 +161,46 @@
     <table class="app-table">
       <thead>
         <tr>
-          <th>Time</th>
+          <th>Started</th>
+          <th>Finished</th>
           <th>Job</th>
           <th>Status</th>
-          <th>Duration (ms)</th>
-          <th>Summary</th>
+          <th>Duration</th>
+          <th>Result</th>
+          <th>Metadata</th>
         </tr>
       </thead>
       <tbody>
         {% for row in rows %}
         <tr>
           <td>{{ row.started_at }}</td>
-          <td>{{ row.job_label or row.job_name }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ row.duration_ms or '' }}</td>
+          <td>{{ row.finished_at or '' }}</td>
           <td>
-            {{ row.result_summary or row.error_message }}
+            <strong>{{ row.job_label or row.job_name }}</strong>
+            <div class="job-meta">{{ row.job_name }}</div>
+          </td>
+          <td>
+            <span class="job-status job-status-{{ row.status }}">
+              {{ row.status.replace('_', ' ') }}
+            </span>
+          </td>
+          <td>
+            {% if row.duration_ms is not none %}
+              {{ row.duration_ms }} ms
+            {% endif %}
+          </td>
+          <td>{{ row.result_summary or row.error_message }}</td>
+          <td>
+            {% if row.metadata_summary %}
+              {{ row.metadata_summary }}
+            {% elif row.metadata_parsed %}
+              {{ row.metadata_parsed }}
+            {% endif %}
           </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="5">No job runs recorded yet.</td>
+          <td colspan="7">No job runs matched the selected filters.</td>
         </tr>
         {% endfor %}
       </tbody>
