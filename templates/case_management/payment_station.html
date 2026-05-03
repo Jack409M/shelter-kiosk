@@ -50,6 +50,7 @@
         <h2>Post Payment</h2>
 
         <form method="post">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="resident_id" value="{{ selected_resident['id'] }}">
 
           <div class="cmx-field">
