@@ -295,7 +295,63 @@ def _check_sms_status() -> dict:
             ", ".join(missing),
         )
 
-    return _status("SMS", "ok", "SMS sending appears configured.", "Twilio enabled")
+    cutoff_iso = (datetime.now(UTC) - timedelta(hours=24)).replace(microsecond=0).isoformat()
+
+    try:
+        recent = db_fetchone(
+            """
+            SELECT
+                COUNT(1) AS issue_count,
+                SUM(CASE WHEN status = %s THEN 1 ELSE 0 END) AS failed_count,
+                SUM(CASE WHEN status = %s THEN 1 ELSE 0 END) AS skipped_count,
+                MAX(created_at) AS last_issue_at
+            FROM sms_attempt_log
+            WHERE status IN (%s, %s)
+              AND created_at >= %s
+            """,
+            ("failed", "skipped", "failed", "skipped", cutoff_iso),
+        ) or {}
+        latest = db_fetchone(
+            """
+            SELECT status, reason, created_at
+            FROM sms_attempt_log
+            WHERE status IN (%s, %s)
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            ("failed", "skipped"),
+        )
+    except Exception as err:
+        current_app.logger.exception("system_health_sms_delivery_check_failed")
+        return _status(
+            "SMS",
+            "warn",
+            "SMS sending appears configured, but delivery history could not be checked.",
+            str(err),
+        )
+
+    issue_count = int(recent.get("issue_count") or 0)
+    failed_count = int(recent.get("failed_count") or 0)
+    skipped_count = int(recent.get("skipped_count") or 0)
+
+    if issue_count > 0:
+        state = "error" if failed_count > 0 else "warn"
+        latest_status = str((latest or {}).get("status") or "").strip()
+        latest_reason = str((latest or {}).get("reason") or "Unknown reason").strip()
+        latest_at = str((latest or {}).get("created_at") or "Unknown time").strip()
+        return _status(
+            "SMS",
+            state,
+            f"{issue_count} SMS issue(s) in the last 24 hours: {failed_count} failed, {skipped_count} skipped.",
+            f"Last issue: {latest_status or 'unknown'} at {latest_at}: {latest_reason}",
+        )
+
+    return _status(
+        "SMS",
+        "ok",
+        "SMS sending appears configured and no failed or skipped attempts were logged in the last 24 hours.",
+        "Twilio enabled",
+    )
 
 
 def _check_scheduler_status() -> dict:
