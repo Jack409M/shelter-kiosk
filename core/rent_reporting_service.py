@@ -7,6 +7,7 @@ from statistics import mean
 from zoneinfo import ZoneInfo
 
 from core.db import db_fetchall
+from core.shelter_capacity_service import load_shelter_capacities
 from routes.rent_tracking_parts.settings import _load_settings
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
@@ -15,11 +16,6 @@ SHELTER_LABELS = {
     "abba": "Abba House",
     "haven": "Haven House",
     "gratitude": "Gratitude House",
-}
-SHELTER_CAPACITY = {
-    "abba": 10,
-    "haven": 18,
-    "gratitude": 34,
 }
 
 
@@ -121,8 +117,8 @@ def _days_in_year(year: int) -> int:
     return 366 if calendar.isleap(year) else 365
 
 
-def _capacity_days(year: int, shelter: str) -> int:
-    return SHELTER_CAPACITY.get(shelter, 0) * _days_in_year(year)
+def _capacity_days(year: int, shelter: str, capacities: dict[str, int]) -> int:
+    return int(capacities.get(shelter, 0) or 0) * _days_in_year(year)
 
 
 def _settings_float(settings: dict, key: str, fallback: float) -> float:
@@ -198,7 +194,7 @@ def _minimal_monthly_rate_for_shelter(year: int, shelter: str, notes: list[str])
     return 0.0
 
 
-def _gratitude_known_unit_rates(year: int, notes: list[str]) -> list[float]:
+def _gratitude_known_unit_rates(year: int, notes: list[str], capacity: int) -> list[float]:
     settings = _load_settings("gratitude")
     rows = db_fetchall(
         """
@@ -222,7 +218,6 @@ def _gratitude_known_unit_rates(year: int, notes: list[str]) -> list[float]:
         unit_type = _normal_unit_type(row.get("apartment_size_snapshot"))
         rates.append(_gratitude_level5_rate_for_unit(settings, unit_type))
 
-    capacity = SHELTER_CAPACITY["gratitude"]
     if len(rates) < capacity:
         default_rate = _settings_float(settings, "gh_level_5_two_bedroom_rent", 300.0)
         missing = capacity - len(rates)
@@ -237,12 +232,14 @@ def _gratitude_known_unit_rates(year: int, notes: list[str]) -> list[float]:
     return rates
 
 
-def _minimal_capacity_rent(year: int, shelter: str, notes: list[str]) -> float:
+def _minimal_capacity_rent(year: int, shelter: str, notes: list[str], capacities: dict[str, int]) -> float:
+    capacity = int(capacities.get(shelter, 0) or 0)
+
     if shelter == "gratitude":
-        return round(sum(rate * 12 for rate in _gratitude_known_unit_rates(year, notes)), 2)
+        return round(sum(rate * 12 for rate in _gratitude_known_unit_rates(year, notes, capacity)), 2)
 
     monthly_rate = _minimal_monthly_rate_for_shelter(year, shelter, notes)
-    return round(monthly_rate * SHELTER_CAPACITY.get(shelter, 0) * 12, 2)
+    return round(monthly_rate * capacity * 12, 2)
 
 
 def _actual_charges_by_shelter(year: int) -> dict[str, dict]:
@@ -465,6 +462,7 @@ def _build_total_row(year: int, rows: list[RentFinancialShelterRow]) -> RentFina
 
 
 def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
+    capacities = load_shelter_capacities()
     actual_by_shelter = _actual_charges_by_shelter(year)
     credits_by_shelter = _credits_by_shelter(year)
     rows: list[RentFinancialShelterRow] = []
@@ -473,8 +471,8 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
         notes: list[str] = []
         actual = actual_by_shelter.get(shelter, {})
         credits = credits_by_shelter.get(shelter, {})
-        capacity_days = _capacity_days(year, shelter)
-        minimal_capacity = _minimal_capacity_rent(year, shelter, notes)
+        capacity_days = _capacity_days(year, shelter, capacities)
+        minimal_capacity = _minimal_capacity_rent(year, shelter, notes, capacities)
         actual_charged = _money(actual.get("actual_charged_rent"))
         occupied_days = min(_int(actual.get("occupied_days")), capacity_days) if capacity_days else 0
         vacant_days = max(capacity_days - occupied_days, 0)
@@ -514,13 +512,14 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
         )
 
     definitions = [
-        {"term": "Minimal Capacity Rent", "definition": "Conservative annual rent capacity floor: Haven base rent, Abba Level 4 rent, and Gratitude Level 5 rent by unit type."},
+        {"term": "Minimal Capacity Rent", "definition": "Conservative annual rent capacity floor using configured shelter capacity, Haven base rent, Abba Level 4 rent, and Gratitude Level 5 rent by unit type."},
         {"term": "Historic Capacity Rent", "definition": "Actual average charged rent per occupied day multiplied by full annual capacity days."},
         {"term": "Actual Charged Rent", "definition": "Sum of actual rent sheet charges for occupied residents."},
         {"term": "Cash Collected", "definition": "Non-voided rent ledger payments only. This is actual money received."},
         {"term": "Work Credit (Program Approved Rent Offset)", "definition": "Non-voided rent ledger credits with source code manual_credit_work_credit. This is approved labor applied instead of a cash rent payment."},
         {"term": "Total Rent Applied", "definition": "Cash collected plus program approved work credit applied toward rent."},
         {"term": "Vacancy Loss (Unoccupied Capacity)", "definition": "Minimal capacity rent minus actual charged rent. This is conservative and separates unoccupied capacity from unpaid rent."},
+        {"term": "Vacancy Percentage", "definition": "Vacant capacity days divided by configured total capacity days."},
         {"term": "Unpaid Rent (After Credits)", "definition": "Actual charged rent minus cash collected and program approved work credit."},
         {"term": "Rent Collection Rate", "definition": "Cash collected divided by actual charged rent. This is a rent collection measure, not a resident recovery outcome measure."},
     ]
