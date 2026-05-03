@@ -5,6 +5,7 @@ from typing import Iterable
 
 from flask import session
 
+from core.db import db_fetchone
 from core.sh_events import safe_log_sh_event
 from core.system_alerts import create_system_alert
 from routes.rent_tracking_parts.data_access import _load_sheet_entries
@@ -53,6 +54,57 @@ def _post_monthly_rent_for_shelter(
     )
 
 
+def _open_alert_exists(alert_key: str) -> bool:
+    row = db_fetchone(
+        """
+        SELECT id
+        FROM system_alerts
+        WHERE alert_key = %s
+          AND status = %s
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (alert_key, "open"),
+    )
+    return bool(row)
+
+
+def _alert_once_for_failed_month(
+    *,
+    alert_key: str,
+    shelter: str,
+    rent_month_label: str,
+    error_text: str,
+) -> None:
+    if _open_alert_exists(alert_key):
+        safe_log_sh_event(
+            event_type="monthly_rent_charge_job",
+            event_status="error_suppressed",
+            event_source="rent_charge_job",
+            message=f"Repeated monthly rent charge failure suppressed for {shelter} {rent_month_label}.",
+            metadata={
+                "alert_key": alert_key,
+                "shelter": shelter,
+                "rent_month_label": rent_month_label,
+                "error": error_text,
+            },
+        )
+        return
+
+    create_system_alert(
+        alert_type="scheduled_job",
+        severity="critical",
+        title="Monthly rent posting failed",
+        message=(
+            f"Monthly rent charge posting failed for {shelter} {rent_month_label}. "
+            f"Error: {error_text or 'Unknown error'}"
+        ),
+        source_module="rent_charge_job",
+        alert_key=alert_key,
+        metadata=error_text,
+    )
+
+
 def run_monthly_rent_charge_job(
     app,
     *,
@@ -96,32 +148,38 @@ def run_monthly_rent_charge_job(
                     },
                 )
             except Exception as err:
+                error_text = str(err)
+                alert_key = (
+                    f"monthly_rent_charge:{normalized_shelter}:"
+                    f"{rent_year:04d}-{rent_month:02d}"
+                )
                 app.logger.exception(
-                    "monthly rent charge job failed for shelter=%s year=%s month=%s",
+                    "monthly rent charge job failed for shelter=%s year=%s month=%s error=%s",
                     normalized_shelter,
                     rent_year,
                     rent_month,
+                    error_text,
                 )
                 safe_log_sh_event(
                     event_type="monthly_rent_charge_job",
                     event_status="error",
                     event_source=source,
-                    message=f"Monthly rent charge job failed for {normalized_shelter} {rent_month_label}.",
+                    message=(
+                        f"Monthly rent charge job failed for {normalized_shelter} "
+                        f"{rent_month_label}: {error_text or 'Unknown error'}"
+                    ),
                     metadata={
                         "shelter": normalized_shelter,
                         "rent_year": rent_year,
                         "rent_month": rent_month,
-                        "error": str(err),
+                        "error": error_text,
                     },
                 )
-                create_system_alert(
-                    alert_type="scheduled_job",
-                    severity="critical",
-                    title="Monthly rent posting failed",
-                    message=f"Monthly rent charge posting failed for {normalized_shelter} {rent_month_label}.",
-                    source_module="rent_charge_job",
-                    alert_key=f"monthly_rent_charge:{normalized_shelter}:{rent_year:04d}-{rent_month:02d}",
-                    metadata=str(err),
+                _alert_once_for_failed_month(
+                    alert_key=alert_key,
+                    shelter=normalized_shelter,
+                    rent_month_label=rent_month_label,
+                    error_text=error_text,
                 )
 
     return results
