@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <h1>Rent Collection Board Summary</h1>
+      <div class="cmx-section-subtitle">Year {{ report.year }}</div>
+    </div>
+
+    <div class="cmx-card">
+      <h2>Program Summary</h2>
+      <ul>
+        <li>Total Rent Charged: ${{ '%.0f'|format(report.totals.actual_charged_rent) }}</li>
+        <li>Cash Collected: ${{ '%.0f'|format(report.totals.cash_collected) }}</li>
+        <li>Work Credit Applied: ${{ '%.0f'|format(report.totals.work_credit) }}</li>
+        <li>Total Rent Applied: ${{ '%.0f'|format(report.totals.total_recovered) }}</li>
+        <li>Unpaid Rent: ${{ '%.0f'|format(report.totals.unrecovered_charged_rent) }}</li>
+      </ul>
+    </div>
+
+    <div class="cmx-card">
+      <h2>By Shelter</h2>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Shelter</th>
+            <th>Charged</th>
+            <th>Collected</th>
+            <th>Unpaid</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in report.rows %}
+          <tr>
+            <td>{{ r.shelter_label }}</td>
+            <td>${{ '%.0f'|format(r.actual_charged_rent) }}</td>
+            <td>${{ '%.0f'|format(r.total_recovered) }}</td>
+            <td>${{ '%.0f'|format(r.unrecovered_charged_rent) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
