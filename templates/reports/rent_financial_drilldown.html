@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <h1>{{ drilldown.shelter_label }} Resident Drilldown</h1>
+      <div class="cmx-section-subtitle">Year {{ drilldown.year }}</div>
+    </div>
+
+    <div class="cmx-card">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Resident</th>
+            <th>Rent Charged</th>
+            <th>Cash</th>
+            <th>Work Credit</th>
+            <th>Total Applied</th>
+            <th>Unpaid</th>
+            <th>Collection %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in drilldown.rows %}
+          <tr>
+            <td>{{ r.resident_name }}</td>
+            <td>${{ '%.0f'|format(r.rent_charged) }}</td>
+            <td>${{ '%.0f'|format(r.cash_collected) }}</td>
+            <td>${{ '%.0f'|format(r.work_credit) }}</td>
+            <td>${{ '%.0f'|format(r.total_rent_applied) }}</td>
+            <td>${{ '%.0f'|format(r.unpaid_rent) }}</td>
+            <td>{% if r.rent_collection_rate %}{{ '%.1f'|format(r.rent_collection_rate) }}%{% else %}-{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
