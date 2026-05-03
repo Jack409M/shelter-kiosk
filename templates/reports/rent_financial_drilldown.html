@@ -4,8 +4,13 @@
   <div class="cmx-shell">
 
     <div class="cmx-card">
-      <h1>{{ drilldown.shelter_label }} Resident Drilldown</h1>
-      <div class="cmx-section-subtitle">Year {{ drilldown.year }}</div>
+      <div class="cmx-section-head">
+        <div>
+          <h1>{{ drilldown.shelter_label }} Resident Drilldown</h1>
+          <div class="cmx-section-subtitle">Year {{ drilldown.year }}</div>
+        </div>
+        <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_performance', year=drilldown.year) }}">← Back to Report</a>
+      </div>
     </div>
 
     <div class="cmx-card">
