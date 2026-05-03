@@ -219,6 +219,7 @@
   <div class="cmx-shell rent-dashboard">
 
     {% set collection_rate = report.totals.collection_rate %}
+    {% set vacancy_percentage = (report.totals.vacant_days / report.totals.capacity_days * 100) if report.totals.capacity_days else none %}
     {% set rate_class = 'bad' %}
     {% if collection_rate is not none and collection_rate >= 80 %}
       {% set rate_class = 'good' %}
@@ -252,15 +253,15 @@
         <div class="rent-kpi-value">${{ '%.0f'|format(report.totals.actual_charged_rent) }}</div>
         <div class="rent-kpi-note">Resident rent billed this year</div>
       </div>
-      <div class="rent-kpi good">
-        <div class="rent-kpi-label">Total Rent Applied</div>
-        <div class="rent-kpi-value">${{ '%.0f'|format(report.totals.total_recovered) }}</div>
-        <div class="rent-kpi-note">Cash plus approved work credit</div>
+      <div class="rent-kpi bad">
+        <div class="rent-kpi-label">Vacancy Percentage</div>
+        <div class="rent-kpi-value">{% if vacancy_percentage is not none %}{{ '%.1f'|format(vacancy_percentage) }}%{% else %}—{% endif %}</div>
+        <div class="rent-kpi-note">Vacant capacity days divided by capacity days</div>
       </div>
       <div class="rent-kpi bad">
-        <div class="rent-kpi-label">Unpaid Rent</div>
-        <div class="rent-kpi-value">${{ '%.0f'|format(report.totals.unrecovered_charged_rent) }}</div>
-        <div class="rent-kpi-note">Remaining after cash and credits</div>
+        <div class="rent-kpi-label">Vacancy Loss</div>
+        <div class="rent-kpi-value">${{ '%.0f'|format(report.totals.vacancy_loss) }}</div>
+        <div class="rent-kpi-note">Conservative unoccupied capacity loss</div>
       </div>
     </section>
 
@@ -332,14 +333,14 @@
       <div class="rent-panel-head">
         <div>
           <h2>Shelter Summary</h2>
-          <div class="rent-panel-subtitle">Compare collection, credits, vacancy, and unpaid rent across shelters.</div>
+          <div class="rent-panel-subtitle">Compare collection, credits, vacancy loss, vacancy percentage, and unpaid rent across shelters.</div>
         </div>
       </div>
       <div class="rent-table-wrap">
         <table class="rent-table">
           <thead>
             <tr>
-              <th>Shelter</th><th>Minimal Capacity</th><th>Historic Capacity</th><th>Rent Charged</th><th>Cash</th><th>Work Credit</th><th>Total Applied</th><th>Vacancy</th><th>Unpaid</th><th>Collection</th><th>Drilldown</th>
+              <th>Shelter</th><th>Minimal Capacity</th><th>Historic Capacity</th><th>Rent Charged</th><th>Cash</th><th>Work Credit</th><th>Total Applied</th><th>Vacancy Loss</th><th>Vacancy %</th><th>Unpaid</th><th>Collection</th><th>Drilldown</th>
             </tr>
           </thead>
           <tbody>
@@ -350,6 +351,7 @@
               {% elif r.collection_rate is not none and r.collection_rate >= 50 %}
                 {% set row_rate_class = 'rent-rate-warn' %}
               {% endif %}
+              {% set row_vacancy_percentage = (r.vacant_days / r.capacity_days * 100) if r.capacity_days else none %}
               <tr>
                 <td><strong>{{ r.shelter_label }}</strong></td>
                 <td>${{ '%.0f'|format(r.minimal_capacity_rent) }}</td>
@@ -359,6 +361,7 @@
                 <td>${{ '%.0f'|format(r.work_credit) }}</td>
                 <td>${{ '%.0f'|format(r.total_recovered) }}</td>
                 <td>${{ '%.0f'|format(r.vacancy_loss) }}</td>
+                <td>{% if row_vacancy_percentage is not none %}{{ '%.1f'|format(row_vacancy_percentage) }}%{% else %}—{% endif %}</td>
                 <td>${{ '%.0f'|format(r.unrecovered_charged_rent) }}</td>
                 <td><span class="rent-rate-pill {{ row_rate_class }}">{% if r.collection_rate is not none %}{{ '%.1f'|format(r.collection_rate) }}%{% else %}—{% endif %}</span></td>
                 <td><a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_drilldown', shelter=r.shelter, year=report.year) }}">View</a></td>
@@ -375,6 +378,7 @@
               <td>${{ '%.0f'|format(report.totals.work_credit) }}</td>
               <td>${{ '%.0f'|format(report.totals.total_recovered) }}</td>
               <td>${{ '%.0f'|format(report.totals.vacancy_loss) }}</td>
+              <td>{% if vacancy_percentage is not none %}{{ '%.1f'|format(vacancy_percentage) }}%{% else %}—{% endif %}</td>
               <td>${{ '%.0f'|format(report.totals.unrecovered_charged_rent) }}</td>
               <td>{% if report.totals.collection_rate is not none %}{{ '%.1f'|format(report.totals.collection_rate) }}%{% else %}—{% endif %}</td>
               <td>—</td>
