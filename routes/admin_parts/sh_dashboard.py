@@ -505,7 +505,11 @@ def system_health_dashboard_view():
     cards = [*runtime_cards, *enterprise_cards]
 
     _pass_cleanup_watchdog()
-    sync_system_health_alerts(runtime_cards)
+    alertable_runtime_cards = [
+        card for card in runtime_cards
+        if card.get("label") not in {"Last Error", "Last Successful Event", "SMS", "Last Pass Cleanup"}
+    ]
+    sync_system_health_alerts(alertable_runtime_cards)
     sync_enterprise_readiness_alerts(enterprise_cards)
     alerts = load_open_system_alerts()
     alert_counts = count_open_system_alerts_by_severity()
