@@ -7,15 +7,20 @@
       <div class="cmx-section-head">
         <div>
           <h1>Rent Collection Board Summary</h1>
-          <div class="cmx-section-subtitle">Year {{ report.year }}</div>
+          <div class="cmx-section-subtitle">
+            {{ report.period_label }}<br>
+            {{ report.period_start }} to {{ report.period_end }}
+          </div>
         </div>
-        <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_performance', year=report.year) }}">← Back to Report</a>
+        <a class="cmx-btn-muted" href="{{ url_for('reports_rent_financial.rent_financial_performance', start_date=report.period_start, end_date=report.period_end) }}">← Back to Report</a>
       </div>
     </div>
 
     <div class="cmx-card">
       <h2>Program Summary</h2>
       <ul>
+        <li>Report Period: {{ report.period_label }}</li>
+        <li>Exact Date Range: {{ report.period_start }} to {{ report.period_end }}</li>
         <li>Total Rent Charged: ${{ '%.0f'|format(report.totals.actual_charged_rent) }}</li>
         <li>Cash Collected: ${{ '%.0f'|format(report.totals.cash_collected) }}</li>
         <li>Work Credit Applied: ${{ '%.0f'|format(report.totals.work_credit) }}</li>
