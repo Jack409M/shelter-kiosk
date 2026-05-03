@@ -82,7 +82,8 @@
     sobrietyProgress: "/staff/reports/sobriety-progress",
     followUpOutcomes: "/staff/reports/follow-up-outcomes",
     weeklyProductivity: "/staff/reports/weekly-productivity",
-    familyAndChildren: "/staff/reports/family-and-children"
+    familyAndChildren: "/staff/reports/family-and-children",
+    rentFinancialPerformance: "/staff/reports/rent-financial-performance?year=2026"
   };
 
   const catalog = [
@@ -109,6 +110,9 @@
       { id: 'income-change-report', title: 'Income Change Report', summary: 'Compares income at entry, exit, and supported follow up points.', status: 'live', url: liveUrls.incomeChange, keywords: ['entry income','exit income','follow up income'] },
       { id: 'sobriety-progress-report', title: 'Sobriety Progress Report', summary: 'Tracks sobriety status at entry, graduation, and follow up checkpoints.', status: 'live', url: liveUrls.sobrietyProgress, keywords: ['sober','sobriety','follow up'] }
     ]},
+    { slug: 'financial', title: 'Financial', description: 'Shelter level financial reporting for rent, collections, credits, and capacity related performance.', reports: [
+      { id: 'rent-financial-performance-report', title: 'Rent Financial Performance Report', summary: 'Shelter level rent collection performance showing charged rent, cash collected, work credits, unpaid rent, vacancy impact, and collection rates.', status: 'live', url: liveUrls.rentFinancialPerformance, keywords: ['rent','financial','collections','cash collected','work credit','vacancy','shelter'] }
+    ]},
     { slug: 'case-management', title: 'Case Management', description: 'Notes, contact activity, appointments, goals, and resident engagement over time.', reports: [
       { id: 'case-management-activity-report', title: 'Case Management Activity Report', summary: 'Workload and note volume by staff and resident.', status: 'planned', keywords: ['notes','workload','staff'] },
       { id: 'resident-engagement-risk-report', title: 'Resident Engagement Or Risk Report', summary: 'Shows residents with recent, missing, or overdue case management contact.', status: 'planned', keywords: ['engagement','risk'] }
@@ -117,7 +121,7 @@
       { id: 'activity-engagement-report', title: 'Activity Engagement Report', summary: 'Compares this week, last week, and all time activity across shelters, residents, meetings, and categories.', status: 'live', url: liveUrls.activityEngagement, keywords: ['activity','engagement','attendance','meetings'] },
       { id: 'pass-activity-report', title: 'Pass Activity Report', summary: 'Pass requests, approvals, denials, and return timing.', status: 'planned', keywords: ['pass requests','approvals','denials'] }
     ]},
-    { slug: 'employment-income', title: 'Employment And Income', description: 'Earnings, employment movement, work activity, and income change.', reports: [
+    { slug: 'employment-income', title: 'Employment And Income', description: 'Resident based earnings, employment movement, work activity, and income change.', reports: [
       { id: 'weekly-productivity-report', title: 'Weekly Productivity Report', summary: 'Weekly productive hours, work hours, and meeting counts.', status: 'live', url: liveUrls.weeklyProductivity, keywords: ['productive hours','work hours','weekly'] }
     ]},
     { slug: 'families-children', title: 'Families And Children', description: 'Children served, family composition, age bands, reunification, and family impact.', reports: [
