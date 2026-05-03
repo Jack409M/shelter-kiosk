@@ -87,11 +87,12 @@ def rent_financial_csv_export():
     report = build_rent_financial_performance_report(period=period)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "Report Period",
-        report.period_label,
-    ])
+
+    writer.writerow(["Report Period", report.period_label])
+    writer.writerow(["Start Date", report.period_start])
+    writer.writerow(["End Date", report.period_end])
     writer.writerow([])
+
     writer.writerow([
         "Shelter",
         "Minimal Capacity Rent",
