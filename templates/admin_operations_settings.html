@@ -38,6 +38,11 @@
           <p>Full rent table for all levels and unit types. This replaces manual rent entry.</p>
         </a>
 
+        <a class="config-menu-card" href="{{ url_for('shelter_capacity.index') }}">
+          <h3>Shelter Capacity</h3>
+          <p>Define how many resident slots each shelter has for vacancy and turnover tracking.</p>
+        </a>
+
         {% for section in sections %}
           <a class="config-menu-card" href="{{ url_for('operations_settings.settings_section_page', section_key=section.key) }}">
             <h3>{{ section.title }}</h3>
