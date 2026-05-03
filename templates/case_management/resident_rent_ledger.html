@@ -151,7 +151,13 @@
             <select name="credit_category" required>
               <option value="">Select credit category</option>
               {% for category in credit_category_options %}
-                <option value="{{ category }}">{{ category|replace('_', ' ')|title }}</option>
+                <option value="{{ category }}">
+                  {% if category == 'work_credit' %}
+                    Work Credit (labor instead of payment)
+                  {% else %}
+                    {{ category|replace('_', ' ')|title }}
+                  {% endif %}
+                </option>
               {% endfor %}
             </select>
             <input type="text" name="description" placeholder="Credit or refund description" required>
@@ -159,7 +165,7 @@
             <button type="submit" class="cmx-btn">Add Credit</button>
           </form>
           <div class="account-help" style="margin-top:10px;">
-            Refunds are only allowed when the account is actually in credit.
+            Use Work Credit only when approved labor is being applied instead of a cash rent payment. Refunds are only allowed when the account is actually in credit.
           </div>
         </div>
       </div>
