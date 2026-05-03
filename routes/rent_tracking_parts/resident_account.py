@@ -23,7 +23,7 @@ from .views import _ensure_sheet_for_month, _post_monthly_charge_ledger_entries
 
 PAYMENT_METHOD_OPTIONS = ["Check", "Money Order"]
 CHARGE_CATEGORY_OPTIONS = ["cleaning_fee", "lost_key", "maintenance", "other"]
-CREDIT_CATEGORY_OPTIONS = ["refund", "proration_credit", "other_credit"]
+CREDIT_CATEGORY_OPTIONS = ["work_credit", "refund", "proration_credit", "other_credit"]
 
 
 def _load_resident_or_redirect(resident_id: int):
