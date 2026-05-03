@@ -22,19 +22,28 @@
     </div>
   </div>
 
-  {% if idle_time_notice %}
-  <div style="margin-bottom:14px; padding:14px 16px; border-radius:12px; background:#fff7e6; border:1px solid #f0d9a7;">
-    <div style="font-weight:700; color:#7a5a00;">{{ idle_time_notice.title }}</div>
-    <div style="font-size:13px; color:#5c4a00; margin-top:4px;">{{ idle_time_notice.message }}</div>
-    <div style="margin-top:8px; font-size:12px; color:#6b7280;">
-      Avg idle: {{ idle_time_notice.avg_idle_days or '—' }} days · 
-      >2 days: {{ idle_time_notice.over_two_day_count }} · 
-      >7 days: {{ idle_time_notice.over_seven_day_count }}
-    </div>
-  </div>
-  {% endif %}
-
   <div class="case-dashboard-summary">
+
+    <a class="case-summary-card warn" href="{{ url_for('bed_turnover.index') }}">
+      <div class="case-summary-icon">🛏️</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Bed Turnover</div>
+        <div class="case-summary-count">
+          {% if idle_time_notice %}
+            {{ idle_time_notice.over_two_day_count }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+        <div class="case-summary-note">
+          {% if idle_time_notice %}
+            Avg {{ idle_time_notice.avg_idle_days or '—' }} days idle
+          {% else %}
+            No current concerns
+          {% endif %}
+        </div>
+      </div>
+    </a>
 
     <a class="case-summary-card urgent" href="{{ url_for('admin.admin_system_health_data_quality') }}">
       <div class="case-summary-icon">⚠️</div>
