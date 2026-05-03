@@ -236,7 +236,6 @@ def _gratitude_known_unit_rates(year: int, notes: list[str]) -> list[float]:
 
 
 def _minimal_capacity_rent(year: int, shelter: str, notes: list[str]) -> float:
-    days = _days_in_year(year)
     if shelter == "gratitude":
         return round(sum(rate * 12 for rate in _gratitude_known_unit_rates(year, notes)), 2)
 
@@ -324,7 +323,7 @@ def _monthly_rows(year: int) -> list[dict]:
             actual_charged = _money(charge.get("actual_charged_rent"))
             cash = _money(credit.get("cash_collected"))
             work = _money(credit.get("work_credit"))
-            recovered = round(cash + work, 2)
+            total_applied = round(cash + work, 2)
             output.append(
                 {
                     "month": month,
@@ -334,8 +333,8 @@ def _monthly_rows(year: int) -> list[dict]:
                     "actual_charged_rent": actual_charged,
                     "cash_collected": cash,
                     "work_credit": work,
-                    "total_recovered": recovered,
-                    "unrecovered_charged_rent": round(actual_charged - recovered, 2),
+                    "total_recovered": total_applied,
+                    "unrecovered_charged_rent": round(actual_charged - total_applied, 2),
                     "occupied_days": _int(charge.get("occupied_days")),
                 }
             )
@@ -356,7 +355,7 @@ def _build_total_row(year: int, rows: list[RentFinancialShelterRow]) -> RentFina
     charged = round(sum(row.actual_charged_rent for row in rows), 2)
     cash = round(sum(row.cash_collected for row in rows), 2)
     work = round(sum(row.work_credit for row in rows), 2)
-    recovered = round(cash + work, 2)
+    total_applied = round(cash + work, 2)
     occupied_days = sum(row.occupied_days for row in rows)
     capacity_days = sum(row.capacity_days for row in rows)
     vacant_days = max(capacity_days - occupied_days, 0)
@@ -368,12 +367,12 @@ def _build_total_row(year: int, rows: list[RentFinancialShelterRow]) -> RentFina
         actual_charged_rent=charged,
         cash_collected=cash,
         work_credit=work,
-        total_recovered=recovered,
+        total_recovered=total_applied,
         vacancy_loss=round(sum(row.vacancy_loss for row in rows), 2),
-        unrecovered_charged_rent=round(charged - recovered, 2),
-        total_gap_minimal=round(minimal - recovered, 2),
+        unrecovered_charged_rent=round(charged - total_applied, 2),
+        total_gap_minimal=round(minimal - total_applied, 2),
         collection_rate=_pct(cash, charged),
-        recovery_rate=_pct(recovered, charged),
+        recovery_rate=_pct(total_applied, charged),
         capacity_utilization_rate=_pct(charged, minimal),
         occupied_days=occupied_days,
         capacity_days=capacity_days,
@@ -400,7 +399,7 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
         vacant_days = max(capacity_days - occupied_days, 0)
         cash = _money(credits.get("cash_collected"))
         work = _money(credits.get("work_credit"))
-        recovered = round(cash + work, 2)
+        total_applied = round(cash + work, 2)
         historic_capacity = _historic_capacity_rent(
             minimal_capacity,
             actual_charged,
@@ -417,12 +416,12 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
                 actual_charged_rent=actual_charged,
                 cash_collected=cash,
                 work_credit=work,
-                total_recovered=recovered,
+                total_recovered=total_applied,
                 vacancy_loss=vacancy_loss,
-                unrecovered_charged_rent=round(actual_charged - recovered, 2),
-                total_gap_minimal=round(minimal_capacity - recovered, 2),
+                unrecovered_charged_rent=round(actual_charged - total_applied, 2),
+                total_gap_minimal=round(minimal_capacity - total_applied, 2),
                 collection_rate=_pct(cash, actual_charged),
-                recovery_rate=_pct(recovered, actual_charged),
+                recovery_rate=_pct(total_applied, actual_charged),
                 capacity_utilization_rate=_pct(actual_charged, minimal_capacity),
                 occupied_days=occupied_days,
                 capacity_days=capacity_days,
@@ -434,13 +433,15 @@ def build_rent_financial_performance_report(year: int) -> RentFinancialReport:
         )
 
     definitions = [
-        {"term": "Minimal Capacity Rent", "definition": "Conservative annual capacity floor: Haven base rent, Abba Level 4 rent, and Gratitude Level 5 rent by unit type."},
+        {"term": "Minimal Capacity Rent", "definition": "Conservative annual rent capacity floor: Haven base rent, Abba Level 4 rent, and Gratitude Level 5 rent by unit type."},
         {"term": "Historic Capacity Rent", "definition": "Actual average charged rent per occupied day multiplied by full annual capacity days."},
         {"term": "Actual Charged Rent", "definition": "Sum of actual rent sheet charges for occupied residents."},
-        {"term": "Cash Collected", "definition": "Non-voided rent ledger payments only."},
-        {"term": "Work Credit", "definition": "Non-voided rent ledger credits with source code manual_credit_work_credit."},
-        {"term": "Vacancy Loss", "definition": "Minimal capacity rent minus actual charged rent. This is conservative and separates vacancy from nonpayment."},
-        {"term": "Unrecovered Charged Rent", "definition": "Actual charged rent minus cash collected and work credit."},
+        {"term": "Cash Collected", "definition": "Non-voided rent ledger payments only. This is actual money received."},
+        {"term": "Work Credit (Program Approved Rent Offset)", "definition": "Non-voided rent ledger credits with source code manual_credit_work_credit. This is approved labor applied instead of a cash rent payment."},
+        {"term": "Total Rent Applied", "definition": "Cash collected plus program approved work credit applied toward rent."},
+        {"term": "Vacancy Loss (Unoccupied Capacity)", "definition": "Minimal capacity rent minus actual charged rent. This is conservative and separates unoccupied capacity from unpaid rent."},
+        {"term": "Unpaid Rent (After Credits)", "definition": "Actual charged rent minus cash collected and program approved work credit."},
+        {"term": "Rent Collection Rate", "definition": "Cash collected divided by actual charged rent. This is a rent collection measure, not a resident recovery outcome measure."},
     ]
 
     return RentFinancialReport(
