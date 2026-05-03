@@ -28,15 +28,18 @@ def index():
     shelter = str(session.get("shelter") or "").strip().lower()
     report = build_resident_slot_idle_time_report(_current_year())
     rows = report["rows"]
+    live_idle_slots = report.get("current_idle_slots", [])
 
     if role == "case_manager" and shelter:
         rows = [row for row in rows if row.shelter == shelter]
+        live_idle_slots = [row for row in live_idle_slots if row.get("shelter") == shelter]
 
     return render_template(
         "bed_turnover/index.html",
         title="Bed Turnover",
         report=report,
         rows=rows,
+        live_idle_slots=live_idle_slots,
         role=role,
         shelter=shelter,
     )
