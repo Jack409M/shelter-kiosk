@@ -12,6 +12,7 @@
 
         <div class="cmx-button-row">
           <a class="cmx-btn" href="{{ url_for('rent_tracking.payment_station') }}">Payment Station</a>
+          <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.rent_posting_audit') }}">Audit</a>
 
           {% if not monthly_rent_posted %}
             <form method="post" action="{{ url_for('rent_tracking.generate_monthly_rent_charges') }}" style="display:inline;">
