@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -12,6 +13,8 @@ from core.enterprise_readiness import (
     build_enterprise_readiness_cards,
     sync_enterprise_readiness_alerts,
 )
+from core.helpers import utcnow_iso
+from core.scheduler_job_history import count_recent_failed_job_runs, load_latest_job_run
 from core.sh_events import latest_sh_event_by_status, recent_sh_events_by_status
 from core.system_alerts import (
     acknowledge_system_alert,
@@ -25,8 +28,10 @@ from core.system_alerts import (
 from core.timestamp_normalization import normalize_timestamp_columns
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
+PASS_CLEANUP_JOB_NAME = "pass_retention_cleanup"
 PASS_CLEANUP_STALE_THRESHOLD = timedelta(hours=24)
 RECENT_ERROR_ACTIVE_THRESHOLD = timedelta(minutes=15)
+RUN_SLOTS = ((6, 0), (15, 0), (23, 0))
 
 
 def _status(label: str, state: str, detail: str = "", meta: str = "") -> dict:
@@ -62,61 +67,119 @@ def _event_is_recent(value: object, threshold: timedelta = RECENT_ERROR_ACTIVE_T
     return datetime.now(CHICAGO_TZ) - parsed <= threshold
 
 
-def _last_pass_cleanup_finished_at() -> datetime | None:
-    last = current_app.extensions.get("pass_retention_scheduler_last_result") or {}
-    finished_at = str(last.get("finished_at") or "").strip()
+def _load_job_metadata(row: dict | None) -> dict:
+    if not row:
+        return {}
 
-    if not finished_at:
-        return None
+    raw = str(row.get("metadata") or "").strip()
+    if not raw:
+        return {}
 
     try:
-        last_dt = datetime.fromisoformat(finished_at)
+        value = json.loads(raw)
     except Exception:
-        current_app.logger.warning("pass_cleanup_invalid_finished_at=%s", finished_at)
+        current_app.logger.warning("system_health_invalid_job_metadata=%s", raw[:250])
+        return {}
+
+    return value if isinstance(value, dict) else {}
+
+
+def _next_pass_cleanup_run(now: datetime | None = None) -> datetime:
+    current = now or datetime.now(CHICAGO_TZ)
+
+    for hour, minute in RUN_SLOTS:
+        candidate = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if candidate > current:
+            return candidate
+
+    first_hour, first_minute = RUN_SLOTS[0]
+    tomorrow = current + timedelta(days=1)
+    return tomorrow.replace(hour=first_hour, minute=first_minute, second=0, microsecond=0)
+
+
+def _latest_pass_cleanup_completed_at(row: dict | None) -> datetime | None:
+    if not row:
         return None
 
-    if last_dt.tzinfo is None:
-        last_dt = last_dt.replace(tzinfo=CHICAGO_TZ)
-
-    return last_dt.astimezone(CHICAGO_TZ)
+    return _parse_event_datetime(row.get("finished_at") or row.get("started_at"))
 
 
-def _pass_cleanup_is_stale() -> bool:
-    last_dt = _last_pass_cleanup_finished_at()
-    if last_dt is None:
+def _pass_cleanup_is_stale(row: dict | None) -> bool:
+    completed_at = _latest_pass_cleanup_completed_at(row)
+    if completed_at is None:
         return False
 
-    return datetime.now(CHICAGO_TZ) - last_dt >= PASS_CLEANUP_STALE_THRESHOLD
+    return datetime.now(CHICAGO_TZ) - completed_at >= PASS_CLEANUP_STALE_THRESHOLD
 
 
 def _pass_cleanup_card() -> dict:
-    last = current_app.extensions.get("pass_retention_scheduler_last_result") or {}
+    latest = load_latest_job_run(PASS_CLEANUP_JOB_NAME)
+    next_run = _next_pass_cleanup_run().isoformat(timespec="minutes")
 
-    if not last:
+    if not latest:
+        return _status(
+            "Last Pass Cleanup",
+            "warn",
+            "No database job run has been recorded yet.",
+            f"Next scheduled run: {next_run}",
+        )
+
+    status = str(latest.get("status") or "").strip().lower()
+    metadata = _load_job_metadata(latest)
+    total_backfilled = int(metadata.get("total_backfilled", 0) or 0)
+    total_deleted = int(metadata.get("total_deleted", 0) or 0)
+    total_errors = int(metadata.get("total_errors", 0) or 0)
+    failure_count = count_recent_failed_job_runs(
+        job_name=PASS_CLEANUP_JOB_NAME,
+        since_iso=(datetime.now(UTC) - timedelta(hours=24)).replace(microsecond=0).isoformat(),
+    )
+    stale = _pass_cleanup_is_stale(latest)
+    finished_at = str(latest.get("finished_at") or latest.get("started_at") or "").strip()
+    duration_ms = latest.get("duration_ms")
+
+    if stale:
+        return _status(
+            "Last Pass Cleanup",
+            "error",
+            "Pass cleanup has not completed in over 24 hours.",
+            f"Last recorded: {finished_at} | Failures last 24h: {failure_count} | Next scheduled run: {next_run}",
+        )
+
+    if status == "error":
+        error_message = str(latest.get("error_message") or "Pass cleanup failed.").strip()
+        return _status(
+            "Last Pass Cleanup",
+            "error",
+            error_message,
+            f"Last recorded: {finished_at} | Failures last 24h: {failure_count} | Next scheduled run: {next_run}",
+        )
+
+    if status == "skipped_lock":
         return _status(
             "Last Pass Cleanup",
             "ok",
-            "No pass cleanup run recorded yet.",
-            "Waiting for first scheduled run",
+            "Cleanup was skipped because another app instance held the database job lock.",
+            f"Last skipped: {finished_at} | Failures last 24h: {failure_count} | Next scheduled run: {next_run}",
         )
 
-    errors = int(last.get("total_errors", 0) or 0)
-    stale = _pass_cleanup_is_stale()
-    state = "error" if errors or stale else "ok"
-
-    if stale:
-        detail = "Pass cleanup has not completed in over 24 hours."
-    else:
-        detail = (
-            f"Backfilled {last.get('total_backfilled', 0)} | "
-            f"Deleted {last.get('total_deleted', 0)} | Errors {errors}"
+    if status == "running":
+        return _status(
+            "Last Pass Cleanup",
+            "warn",
+            "Pass cleanup is currently recorded as running.",
+            f"Started: {finished_at} | Failures last 24h: {failure_count} | Next scheduled run: {next_run}",
         )
 
+    detail = f"Backfilled {total_backfilled} | Deleted {total_deleted} | Errors {total_errors}"
+    if duration_ms is not None:
+        detail = f"{detail} | Duration {duration_ms} ms"
+
+    state = "error" if total_errors else "ok"
     return _status(
         "Last Pass Cleanup",
         state,
         detail,
-        f"Finished: {last.get('finished_at', '')}",
+        f"Finished: {finished_at} | Failures last 24h: {failure_count} | Next scheduled run: {next_run}",
     )
 
 
@@ -160,12 +223,11 @@ def _timestamp_format_card() -> dict:
 
 
 def _pass_cleanup_watchdog() -> None:
-    last = current_app.extensions.get("pass_retention_scheduler_last_result") or {}
-    finished_at = str(last.get("finished_at") or "").strip()
-
-    if not finished_at or not _pass_cleanup_is_stale():
+    latest = load_latest_job_run(PASS_CLEANUP_JOB_NAME)
+    if not latest or not _pass_cleanup_is_stale(latest):
         return
 
+    finished_at = str(latest.get("finished_at") or latest.get("started_at") or "").strip()
     create_system_alert(
         alert_type="scheduled_job",
         severity="critical",
@@ -246,12 +308,20 @@ def _check_scheduler_status() -> dict:
     last_seen_at = str(
         current_app.extensions.get("pass_retention_scheduler_last_seen_at") or ""
     ).strip()
-    last_finished_at = str(
-        current_app.extensions.get("pass_retention_scheduler_last_finished_at") or ""
-    ).strip()
+    latest = load_latest_job_run(PASS_CLEANUP_JOB_NAME)
+    latest_started_at = str(latest.get("started_at") or "").strip() if latest else ""
+    enablement = (os.environ.get("ENABLE_PASS_RETENTION_SCHEDULER") or "").strip()
 
     if scheduler_status == "running":
-        meta_parts = [part for part in (scheduler_schedule, f"last_seen={last_seen_at}" if last_seen_at else "") if part]
+        meta_parts = [
+            part
+            for part in (
+                scheduler_schedule,
+                f"last_seen={last_seen_at}" if last_seen_at else "",
+                f"last_db_run={latest_started_at}" if latest_started_at else "",
+            )
+            if part
+        ]
         return _status(
             "Scheduler",
             "ok",
@@ -264,7 +334,7 @@ def _check_scheduler_status() -> dict:
             "Scheduler",
             "warn",
             "Scheduler is disabled by configuration.",
-            "SCHEDULER_ENABLED=false",
+            f"ENABLE_PASS_RETENTION_SCHEDULER={enablement or 'not set'}",
         )
 
     if scheduler_status == "testing_skipped":
@@ -275,19 +345,19 @@ def _check_scheduler_status() -> dict:
             "TESTING=true",
         )
 
-    if last_finished_at:
+    if latest_started_at:
         return _status(
             "Scheduler",
             "warn",
-            "Pass retention scheduler has run before, but current status is unknown.",
-            f"last_finished={last_finished_at}",
+            "Pass retention has database run history, but current scheduler process status is unknown.",
+            f"last_db_run={latest_started_at} | ENABLE_PASS_RETENTION_SCHEDULER={enablement or 'not set'}",
         )
 
     return _status(
         "Scheduler",
         "error",
         "Pass retention scheduler is not reporting as running.",
-        "No active scheduler state found",
+        f"ENABLE_PASS_RETENTION_SCHEDULER={enablement or 'not set'}",
     )
 
 
