@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Rent Posting Audit</h1>
+          <div class="cmx-section-subtitle">
+            {{ shelter|shelter }} — {{ month_label }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <form method="get" class="cmx-grid cmx-grid-3">
+        <div class="cmx-field">
+          <label>Year</label>
+          <input type="number" name="year" value="{{ rent_year }}">
+        </div>
+        <div class="cmx-field">
+          <label>Month</label>
+          <input type="number" name="month" value="{{ rent_month }}" min="1" max="12">
+        </div>
+        <div class="cmx-button-row" style="align-items:flex-end;">
+          <button type="submit" class="cmx-btn">Load</button>
+        </div>
+      </form>
+    </div>
+
+    {% if sheet %}
+
+    <div class="cmx-grid cmx-grid-3">
+      <div class="cmx-card">
+        <strong>Expected Charges</strong><br>
+        {{ summary.expected_count }} residents<br>
+        ${{ '%.2f'|format(summary.expected_total) }}
+      </div>
+      <div class="cmx-card">
+        <strong>Posted Charges</strong><br>
+        {{ summary.posted_count }} residents<br>
+        ${{ '%.2f'|format(summary.posted_total) }}
+      </div>
+      <div class="cmx-card">
+        <strong>Missing</strong><br>
+        {{ summary.missing_count }} residents<br>
+        Diff: ${{ '%.2f'|format(summary.difference_total) }}
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Resident</th>
+            <th>Level</th>
+            <th>Apartment</th>
+            <th>Expected Charge</th>
+            <th>Posted</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.resident_name_snapshot }}</td>
+            <td>{{ row.level_snapshot or '—' }}</td>
+            <td>{{ row.apartment_number_snapshot or '—' }}</td>
+            <td>${{ '%.2f'|format(row.prorated_charge or 0) }}</td>
+            <td>
+              {% if row.ledger_entry_id %}
+                ${{ '%.2f'|format(row.ledger_debit_amount or 0) }}
+              {% else %}
+                <span style="color:#8d1f1f; font-weight:700;">Missing</span>
+              {% endif %}
+            </td>
+            <td>{{ row.status }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+      <div class="cmx-card">No rent sheet found for this month.</div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
