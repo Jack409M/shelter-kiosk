@@ -177,7 +177,18 @@ def _handle_unexpected_exception(error: Exception):
     return render_template("errors/500.html"), 500
 
 
+def _start_background_schedulers(app: Flask) -> None:
+    if app.config.get("TESTING"):
+        return
+
+    from core.rent_charge_scheduler import start_rent_charge_scheduler
+
+    start_rent_charge_scheduler(app)
+
+
 def register_app_hooks(app: Flask) -> None:
+    _start_background_schedulers(app)
+
     @app.before_request
     def start_request_context() -> None:
         g.request_id = _request_id()
