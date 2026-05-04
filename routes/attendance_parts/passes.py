@@ -26,6 +26,7 @@ from routes.attendance_parts.pass_view_helpers import (
     filter_overdue_pass_rows,
     get_staff_pass_action_context,
     require_manage_passes_role,
+    require_approved_pass_view_role,
 )
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
@@ -46,7 +47,7 @@ def staff_passes_pending_view():
 
 
 def staff_passes_approved_view():
-    context = require_manage_passes_role()
+    context = require_approved_pass_view_role()
 
     rows = fetch_approved_pass_rows(context.shelter)
 
