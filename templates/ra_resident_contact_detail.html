@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>{{ resident.last_name }}, {{ resident.first_name }}</h1>
+
+<div class="card">
+  <h2>Emergency Contact</h2>
+  <p><strong>Name:</strong> {{ resident.emergency_contact_name }}</p>
+  <p><strong>Relationship:</strong> {{ resident.emergency_contact_relationship }}</p>
+  <p><strong>Phone:</strong> {{ resident.emergency_contact_phone }}</p>
+</div>
+
+<a href="{{ url_for('ra_resident_contacts.contact_list') }}">Back</a>
+{% endblock %}
