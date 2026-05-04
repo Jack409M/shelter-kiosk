@@ -19,6 +19,8 @@
 
 <h1>Approved Passes</h1>
 
+{% set is_ra = session.get("role") == "ra" %}
+
 {% if rows %}
 <table class="table">
   <thead>
@@ -27,10 +29,14 @@
       <th>Status</th>
       <th>Type</th>
       <th>When</th>
-      <th>Destination</th>
-      <th>Reason</th>
+      {% if not is_ra %}
+        <th>Destination</th>
+        <th>Reason</th>
+      {% endif %}
       <th>Approved</th>
-      <th></th>
+      {% if not is_ra %}
+        <th></th>
+      {% endif %}
     </tr>
   </thead>
   <tbody>
@@ -47,12 +53,16 @@
           {{ r.start_date }} to {{ r.end_date }}
         {% endif %}
       </td>
-      <td>{{ r.destination }}</td>
-      <td>{{ r.reason or "" }}</td>
+      {% if not is_ra %}
+        <td>{{ r.destination }}</td>
+        <td>{{ r.reason or "" }}</td>
+      {% endif %}
       <td>{{ fmt_dt(r.approved_at_local) }}</td>
-      <td>
-        <a href="{{ url_for('attendance.staff_pass_detail', pass_id=r.id) }}">Open</a>
-      </td>
+      {% if not is_ra %}
+        <td>
+          <a href="{{ url_for('attendance.staff_pass_detail', pass_id=r.id) }}">Open</a>
+        </td>
+      {% endif %}
     </tr>
     {% endfor %}
   </tbody>
