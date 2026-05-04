@@ -30,6 +30,7 @@ STAFF_PERMISSION_PREFIXES: Final[dict[str, str]] = {
     "inspection_v2.": "inspections.manage",
     "kiosk.": "kiosk.manage",
     "operations_settings.": "operations_settings.manage",
+    "ra_chore_operations.": "shelter_operations.manage",
     "rent_tracking.": "rent.manage",
     "reports.": "reports.view",
     "reports_active_census.": "reports.view",
