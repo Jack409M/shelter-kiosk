@@ -142,7 +142,7 @@
                 <form
                   id="toggle-day-{{ day.id }}"
                   method="post"
-                  action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=day.id) }}"
+                  action="{{ url_for('ra_chore_operations.toggle_chore_board_completion', assignment_id=day.id) }}"
                   style="display:none;"
                 >
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
