@@ -359,6 +359,9 @@ def staff_login():
     if session.get("role") == "admin":
         return redirect(url_for("admin.admin_dashboard"))
 
+    if session.get("role") == "case_manager":
+        return redirect(url_for("case_dashboard.dashboard"))
+
     if session.get("role") == "demographics_viewer":
         return redirect(url_for("reports.reports_index"))
 
@@ -411,6 +414,9 @@ def staff_select_shelter():
     post_shelter_redirect = str(session.pop("post_shelter_redirect", "") or "").strip()
     if post_shelter_redirect.startswith("/staff") or post_shelter_redirect.startswith("/reports"):
         return redirect(post_shelter_redirect)
+
+    if session.get("role") == "case_manager":
+        return redirect(url_for("case_dashboard.dashboard"))
 
     if session.get("role") == "demographics_viewer":
         return redirect(url_for("reports.reports_index"))
