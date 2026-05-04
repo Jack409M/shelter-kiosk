@@ -89,9 +89,7 @@
               <details class="nav-mobile-section" open>
                 <summary>Operations</summary>
                 <div class="nav-mobile-links">
-                  {% if chore_board_url %}
-                    <a href="{{ chore_board_url }}">Chores</a>
-                  {% endif %}
+                  <a href="{{ url_for('ra_chore_operations.ra_chore_board') }}">Chores</a>
                   <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
                   <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
                   <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
@@ -347,9 +345,7 @@
 
             {% if is_ra %}
 
-              {% if chore_board_url %}
-                <a href="{{ chore_board_url }}">Chores</a>
-              {% endif %}
+              <a href="{{ url_for('ra_chore_operations.ra_chore_board') }}">Chores</a>
               <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
               <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
               <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
