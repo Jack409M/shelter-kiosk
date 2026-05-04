@@ -16,7 +16,7 @@ shelter_operations = Blueprint(
 
 
 def _ops_allowed() -> bool:
-    return session.get("role") in {"admin", "shelter_director"}
+    return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 
 def _ops_access_redirect():
