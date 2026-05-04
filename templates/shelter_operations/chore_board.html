@@ -142,7 +142,7 @@
                 <form
                   id="toggle-day-{{ day.id }}"
                   method="post"
-                  action="{{ url_for('ra_chore_operations.toggle_chore_board_completion', assignment_id=day.id) }}"
+                  action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=day.id) }}"
                   style="display:none;"
                 >
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -183,5 +183,370 @@
     <p>No chores assigned for this week.</p>
   {% endif %}
 </div>
+
+<style>
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
+}
+
+.chore-print-sheet {
+  background: #fff;
+}
+
+.sheet-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.sheet-org {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sheet-shelter {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-top: 2px;
+}
+
+.sheet-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.sheet-week {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.chore-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.col-who {
+  width: 26%;
+}
+
+.col-when {
+  width: 8%;
+}
+
+.col-what {
+  width: 24%;
+}
+
+.col-day {
+  width: 5.2%;
+}
+
+.col-delete {
+  width: 6%;
+}
+
+.chore-board-table th,
+.chore-board-table td {
+  border: 1px solid #000;
+  padding: 6px;
+  vertical-align: middle;
+}
+
+.chore-board-table th {
+  background: #f3f4f6;
+  text-align: center;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.screen-select {
+  width: 100%;
+}
+
+.print-value {
+  display: none;
+}
+
+.when-cell {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.chore-board-table td.day-cell {
+  text-align: center;
+  font-size: 18px;
+  padding: 4px;
+}
+
+.check-btn {
+  border: 1px solid #777;
+  background: #fff;
+  font-size: 22px;
+  line-height: 1;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.check-btn:hover {
+  background: #f5f5f5;
+}
+
+.print-check {
+  display: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+@media print {
+  .no-print,
+  nav,
+  .sidebar,
+  header,
+  footer,
+  .screen-title,
+  .flash,
+  .flashes,
+  .alert,
+  .messages {
+    display: none !important;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    height: 100%;
+  }
+
+  main,
+  .main-content,
+  .container,
+  .content,
+  .page-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .card,
+  .chore-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+  }
+
+  .chore-print-sheet {
+    padding: 0 !important;
+    min-height: 7.75in;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .sheet-header {
+    margin: 0 0 0.12in 0;
+  }
+
+  .sheet-org {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.05;
+  }
+
+  .sheet-shelter {
+    font-size: 12px;
+    margin-top: 2px;
+    line-height: 1.05;
+  }
+
+  .sheet-title {
+    font-size: 24px;
+    margin-top: 4px;
+    line-height: 1.05;
+  }
+
+  .sheet-week {
+    font-size: 13px;
+    margin-top: 4px;
+    line-height: 1.05;
+  }
+
+  .table-wrap {
+    overflow: visible !important;
+    max-height: none !important;
+    flex: 1 1 auto;
+  }
+
+  .chore-board-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  .chore-board-table thead,
+  .chore-board-table tbody,
+  .chore-board-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .chore-board-table th,
+  .chore-board-table td {
+    border: 1px solid #000;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .chore-board-table th {
+    position: static !important;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 4px;
+    height: 0.28in;
+  }
+
+  .screen-select {
+    display: none !important;
+  }
+
+  .print-value {
+    display: flex !important;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 2px 4px;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .print-name {
+    font-size: clamp(11px, calc(24px - (var(--row-count) * 0.35px)), 18px);
+  }
+
+  .print-chore {
+    font-size: clamp(11px, calc(23px - (var(--row-count) * 0.33px)), 17px);
+  }
+
+  .when-cell {
+    font-size: clamp(10px, calc(20px - (var(--row-count) * 0.30px)), 15px);
+    text-align: center;
+    white-space: nowrap;
+    font-weight: 600;
+    padding: 0 2px;
+  }
+
+  .chore-board-table td.day-cell {
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .print-check {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: clamp(11px, calc(21px - (var(--row-count) * 0.30px)), 15px);
+    line-height: 1;
+  }
+
+  .col-who {
+    width: 26%;
+  }
+
+  .col-when {
+    width: 8%;
+  }
+
+  .col-what {
+    width: 22%;
+  }
+
+  .col-day {
+    width: 6%;
+  }
+
+  .col-delete {
+    width: 0 !important;
+  }
+
+  .chore-board-table tbody tr {
+    height: calc((7.75in - 0.95in) / var(--row-count));
+  }
+
+  @page {
+    size: letter landscape;
+    margin: 0.22in;
+  }
+}
+</style>
+
+<script>
+function shiftWeek(days) {
+  const input = document.getElementById("assigned_date");
+  if (!input || !input.value) return;
+
+  const parts = input.value.split("-");
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  dt.setDate(dt.getDate() + days);
+
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  input.value = `${y}-${m}-${d}`;
+
+  document.getElementById("weekForm").submit();
+}
+
+function goToToday() {
+  const dt = new Date();
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  document.getElementById("assigned_date").value = `${y}-${m}-${d}`;
+  document.getElementById("weekForm").submit();
+}
+
+function submitWithScroll(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+
+  const scrollFields = form.querySelectorAll(".scroll-y-field");
+  scrollFields.forEach(function(field) {
+    field.value = String(window.scrollY || window.pageYOffset || 0);
+  });
+
+  form.submit();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const savedScroll = {{ (request.values.get('scroll_y') or '0')|int }};
+  if (savedScroll > 0) {
+    window.requestAnimationFrame(function() {
+      window.scrollTo(0, savedScroll);
+    });
+  }
+});
+</script>
 
 {% endblock %}
