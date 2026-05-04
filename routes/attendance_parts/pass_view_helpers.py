@@ -9,6 +9,7 @@ from flask import abort, session
 from routes.attendance_parts.pass_policy import has_active_pass_block
 
 MANAGE_PASS_ROLES = {"admin", "shelter_director", "case_manager"}
+VIEW_APPROVED_PASS_ROLES = {"admin", "shelter_director", "case_manager", "ra"}
 
 
 # -----------------------------------------
@@ -62,6 +63,15 @@ def get_staff_pass_view_context() -> StaffPassViewContext:
         shelter=shelter,
         role=role,
     )
+
+
+def require_approved_pass_view_role() -> StaffPassViewContext:
+    context = get_staff_pass_view_context()
+
+    if context.role not in VIEW_APPROVED_PASS_ROLES:
+        abort(403)
+
+    return context
 
 
 def require_manage_passes_role() -> StaffPassViewContext:
