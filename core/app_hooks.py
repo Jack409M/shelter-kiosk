@@ -10,6 +10,8 @@ from flask import Flask, current_app, g, redirect, render_template, request
 from werkzeug.exceptions import HTTPException
 from werkzeug.wrappers import Response
 
+from core.permissions import enforce_route_permission
+
 _STATIC_CACHE_CONTROL: Final[str] = "public, max-age=86400"
 _DYNAMIC_CACHE_CONTROL: Final[str] = "no-store, no-cache, must-revalidate, private, max-age=0"
 _PERMISSIONS_POLICY: Final[str] = (
@@ -205,6 +207,10 @@ def register_app_hooks(app: Flask) -> None:
             return None
 
         return _redirect_to_https()
+
+    @app.before_request
+    def enforce_staff_permissions():
+        return enforce_route_permission()
 
     @app.after_request
     def add_security_headers(response: Response) -> Response:
