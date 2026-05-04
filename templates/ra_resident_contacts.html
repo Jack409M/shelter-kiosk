@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Resident Emergency Contacts</h1>
+
+<form method="get" style="margin-bottom:16px;">
+  <input type="text" name="q" value="{{ query }}" placeholder="Search name...">
+  <button type="submit">Search</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Emergency Contact</th>
+      <th>Phone</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in residents %}
+    <tr>
+      <td>{{ r.last_name }}, {{ r.first_name }}</td>
+      <td>{{ r.emergency_contact_name }} ({{ r.emergency_contact_relationship }})</td>
+      <td>{{ r.emergency_contact_phone }}</td>
+      <td>
+        <a href="{{ url_for('ra_resident_contacts.contact_detail', resident_id=r.id) }}">View</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
