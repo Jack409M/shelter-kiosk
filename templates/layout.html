@@ -64,7 +64,7 @@
       {% set rent_roll_url = safe_url_for('rent_tracking.rent_roll') %}
       {% set rent_entry_url = safe_url_for('rent_tracking.payment_entry_sheet') %}
       {% set inspection_sheet_url = safe_url_for('inspection_v2.inspection_sheet') %}
-      {% set role = session.get("role") %}
+      {% set role = (session.get("role") or "")|lower %}
       {% set can_view_reports = role in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
       {% set can_manage_passes = role in ["admin", "shelter_director", "case_manager"] %}
       {% set can_case_ops = role in ["admin", "shelter_director", "case_manager"] %}
