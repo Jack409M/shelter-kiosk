@@ -110,6 +110,11 @@ ROLE_PERMISSIONS: Final[dict[str, set[str]]] = {
     "ra": {
         "attendance.view",
         "calendar.view",
+        "case_management.view",
+        "inspections.manage",
+        "residents.manage",
+        "residents.view",
+        "shelter_operations.manage",
         "staff_portal.view",
         "transport.manage",
     },
